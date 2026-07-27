@@ -73,6 +73,7 @@ struct WCAGReferenceView: View {
             }
             .padding(.horizontal, 2)
         }
+        .horizontalScrollFade()
     }
 
     private func chip(_ label: String, _ selected: Bool, _ action: @escaping () -> Void) -> some View {

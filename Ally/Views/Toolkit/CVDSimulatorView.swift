@@ -8,15 +8,11 @@ import UIKit
 /// CVD types to a photo the user picks (or a built-in sample), so designers can
 /// see what a color-dependent UI looks like to others.
 ///
-/// After picking, a **confirmation dialog** asks before the photo replaces what
-/// you're studying — a mis-tap in the library never silently swaps it, and ✕
-/// always clears it.
+/// Picking a photo shows it immediately (Apple's photo picker is already the
+/// selection/confirmation step); ✕ on the image clears it back to the sample.
 struct CVDSimulatorView: View {
-    /// The confirmed photo (nil → we're showing the built-in sample).
-    @State private var confirmedImage: UIImage?
-    /// A just-picked photo awaiting the confirmation dialog.
-    @State private var pendingImage: UIImage?
-    @State private var showConfirm = false
+    /// The chosen photo (nil → we're showing the built-in sample).
+    @State private var chosenImage: UIImage?
 
     @State private var display: UIImage?
     @State private var type: CVDType = .normal
@@ -25,7 +21,7 @@ struct CVDSimulatorView: View {
 
     private static let ciContext = CIContext()
 
-    private var isConfirmed: Bool { confirmedImage != nil }
+    private var isConfirmed: Bool { chosenImage != nil }
 
     var body: some View {
         ScrollView {
@@ -49,12 +45,6 @@ struct CVDSimulatorView: View {
         .onAppear { if sample == nil { sample = Self.sampleImage() }; render() }
         .onChange(of: type) { _, _ in render() }
         .onChange(of: pickerItem) { _, new in loadPicked(new) }
-        .confirmationDialog("Use this photo?", isPresented: $showConfirm, titleVisibility: .visible) {
-            Button("Use Photo") { confirmPending() }
-            Button("Cancel", role: .cancel) { cancelPending() }
-        } message: {
-            Text("It'll replace the sample so you can simulate color blindness on your own screen.")
-        }
     }
 
     // MARK: Intro
@@ -144,6 +134,7 @@ struct CVDSimulatorView: View {
             }
             .padding(.horizontal, 2)
         }
+        .horizontalScrollFade()
     }
 
     // MARK: Photo picker button (styled per state)
@@ -172,23 +163,8 @@ struct CVDSimulatorView: View {
 
     // MARK: Flow actions
 
-    private func confirmPending() {
-        guard let img = pendingImage else { return }
-        confirmedImage = img
-        pendingImage = nil
-        type = .normal
-        Haptics.success()
-        render()
-    }
-
-    private func cancelPending() {
-        pendingImage = nil
-        pickerItem = nil
-        render() // revert to whatever was showing (sample or prior confirmed)
-    }
-
     private func removePhoto() {
-        confirmedImage = nil
+        chosenImage = nil
         pickerItem = nil
         type = .normal
         Haptics.light()
@@ -198,7 +174,7 @@ struct CVDSimulatorView: View {
     // MARK: Processing
 
     /// The image the shown/filtered result is derived from.
-    private var baseImage: UIImage? { confirmedImage ?? sample }
+    private var baseImage: UIImage? { chosenImage ?? sample }
 
     private func render() {
         guard let base = baseImage else { return }
@@ -211,8 +187,10 @@ struct CVDSimulatorView: View {
             if let data = try? await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
                 await MainActor.run {
-                    pendingImage = img
-                    showConfirm = true
+                    chosenImage = img       // picker itself is the selection step
+                    type = .normal
+                    Haptics.success()
+                    render()
                 }
             }
         }

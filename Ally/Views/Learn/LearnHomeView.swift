@@ -126,6 +126,7 @@ struct LearnHomeView: View {
             }
             .padding(.horizontal, Spacing.xl)
         }
+        .horizontalScrollFade()
     }
 
     private func chip(title: String, color: Color, selected: Bool, action: @escaping () -> Void) -> some View {

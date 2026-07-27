@@ -13,6 +13,7 @@
 		12C0114954D74A3F21B21B21 /* ToolkitHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105804E84A6C25E7004FFD03 /* ToolkitHomeView.swift */; };
 		135EAFA3346FF5B59EF9C7F2 /* AccessibilityCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38BD6E35B99D260BC7A15FF2 /* AccessibilityCategory.swift */; };
 		13995855542F72DF389B72C8 /* AllyBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA9222CAFF58E4F38EDD4D5 /* AllyBackground.swift */; };
+		191163B9ED6A3B12C02CD10F /* ScrollFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E36D96CB12439ED77FA140 /* ScrollFade.swift */; };
 		27A01C416E0D20ED5807F149 /* ColorTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDB6DF2890047F5BF83260A /* ColorTokens.swift */; };
 		31B27B127CE9E2764B6A3A94 /* DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56782CEC718D797D70C425F /* DemoSeed.swift */; };
 		38B6A8C05D540427645F76E3 /* AllyAccessibilityAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057405BAA15E3FB58DD674CC /* AllyAccessibilityAuditTests.swift */; };
@@ -67,6 +68,7 @@
 		057405BAA15E3FB58DD674CC /* AllyAccessibilityAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllyAccessibilityAuditTests.swift; sourceTree = "<group>"; };
 		08EE9CB425D380A16DCDC4ED /* CheckHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckHomeView.swift; sourceTree = "<group>"; };
 		105804E84A6C25E7004FFD03 /* ToolkitHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolkitHomeView.swift; sourceTree = "<group>"; };
+		11E36D96CB12439ED77FA140 /* ScrollFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollFade.swift; sourceTree = "<group>"; };
 		15B15E2CAAA236D2D2BA985E /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		15FC37BD240B2E92855C79AF /* WCAGReferenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WCAGReferenceView.swift; sourceTree = "<group>"; };
 		2BEFE6C0CB81E640813596CD /* ContrastCheckerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContrastCheckerView.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				CD5A721DB8D9AF27F78F9F7E /* ConfettiView.swift */,
 				5F8A63E07DBEA9E2F9118D8E /* PressableCardStyle.swift */,
 				6760282843B5E116E76B9761 /* ScoreRing.swift */,
+				11E36D96CB12439ED77FA140 /* ScrollFade.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -412,6 +415,7 @@
 				64A1D0186A99D3FDE6EF5722 /* ScoreEngine.swift in Sources */,
 				88C9446AC451B4B2F8815EFD /* ScoreResultView.swift in Sources */,
 				5AAC113BFC08114974654BF2 /* ScoreRing.swift in Sources */,
+				191163B9ED6A3B12C02CD10F /* ScrollFade.swift in Sources */,
 				AC50B2D0BFB4E8D2726E6A4E /* Spacing.swift in Sources */,
 				12C0114954D74A3F21B21B21 /* ToolkitHomeView.swift in Sources */,
 				110E1B6415B44CD79E991465 /* TopicDetailView.swift in Sources */,
