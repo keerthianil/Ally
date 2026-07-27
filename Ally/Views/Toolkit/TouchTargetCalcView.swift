@@ -12,8 +12,10 @@ struct TouchTargetCalcView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: Spacing.xl) {
+            VStack(alignment: .leading, spacing: Spacing.xl) {
+                intro
                 visual
+                legend
                 sliders
                 results
             }
@@ -24,6 +26,33 @@ struct TouchTargetCalcView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("Touch Target")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var intro: some View {
+        Text("Set a button's size to check it's easy to tap for everyone — including people with tremors or big fingers. Drag the sliders; the box updates live against each platform's minimum.")
+            .font(Typography.callout)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Names the dashed reference rings shown behind the live target.
+    private var legend: some View {
+        HStack(spacing: Spacing.lg) {
+            legendItem(ColorTokens.success, "WCAG 24")
+            legendItem(ColorTokens.warning, "iOS 44")
+            legendItem(ColorTokens.error, "Android 48")
+            Spacer(minLength: 0)
+        }
+        .accessibilityHidden(true) // the results list below conveys the same info to VoiceOver
+    }
+
+    private func legendItem(_ color: Color, _ label: String) -> some View {
+        HStack(spacing: Spacing.xs) {
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(color, style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                .frame(width: 16, height: 16)
+            Text(label).font(Typography.caption2).foregroundStyle(ColorTokens.textSecondary)
+        }
     }
 
     private var visual: some View {
@@ -73,6 +102,7 @@ struct TouchTargetCalcView: View {
             }
             Slider(value: binding, in: 12...80, step: 1)
                 .tint(ColorTokens.motor)
+                .accessibilityLabel(label)
                 .accessibilityValue("\(Int(binding.wrappedValue)) points")
         }
     }

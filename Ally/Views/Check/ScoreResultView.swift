@@ -61,6 +61,9 @@ struct ScoreResultView: View {
         .foregroundStyle(up ? ColorTokens.success : (delta < 0 ? ColorTokens.error : ColorTokens.textSecondary))
         .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm)
         .background(Capsule().fill((up ? ColorTokens.success : ColorTokens.textSecondary).opacity(0.12)))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(delta == 0 ? "No change since last check"
+            : "\(up ? "Up" : "Down") \(abs(delta)) points since last check")
     }
 
     private var breakdown: some View {

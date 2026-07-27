@@ -8,18 +8,16 @@ import UIKit
 /// CVD types to a photo the user picks (or a built-in sample), so designers can
 /// see what a color-dependent UI looks like to others.
 ///
-/// Picking a photo is a deliberate three-step flow — pick → confirm → simulate —
-/// so a mis-tap in the library never silently replaces what you're studying, and
-/// there's always a clear way back out.
+/// After picking, a **confirmation dialog** asks before the photo replaces what
+/// you're studying — a mis-tap in the library never silently swaps it, and ✕
+/// always clears it.
 struct CVDSimulatorView: View {
-    /// Where the user is in the pick → confirm → simulate flow.
-    private enum ImageState {
-        case empty                 // showing the built-in sample
-        case picked(UIImage)       // chose a photo, awaiting confirmation
-        case confirmed(UIImage)    // confirmed — chips now simulate it
-    }
+    /// The confirmed photo (nil → we're showing the built-in sample).
+    @State private var confirmedImage: UIImage?
+    /// A just-picked photo awaiting the confirmation dialog.
+    @State private var pendingImage: UIImage?
+    @State private var showConfirm = false
 
-    @State private var imageState: ImageState = .empty
     @State private var display: UIImage?
     @State private var type: CVDType = .normal
     @State private var pickerItem: PhotosPickerItem?
@@ -27,31 +25,19 @@ struct CVDSimulatorView: View {
 
     private static let ciContext = CIContext()
 
-    /// True while a photo is confirmed (or we're on the sample): the CVD chips
-    /// act on the shown image. During `.picked` we show a plain preview instead.
-    private var simulating: Bool {
-        if case .picked = imageState { return false }
-        return true
-    }
-
-    private var isConfirmed: Bool {
-        if case .confirmed = imageState { return true }
-        return false
-    }
+    private var isConfirmed: Bool { confirmedImage != nil }
 
     var body: some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
+                intro
                 imageArea
-                if case .picked = imageState { confirmBar }
-                if simulating { typePicker }
+                chipsSection
                 photoPickerButton
-                if simulating {
-                    Text(type.explanation)
-                        .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text(type.explanation)
+                    .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(Spacing.xl)
             .padding(.bottom, Spacing.xxl)
@@ -63,6 +49,22 @@ struct CVDSimulatorView: View {
         .onAppear { if sample == nil { sample = Self.sampleImage() }; render() }
         .onChange(of: type) { _, _ in render() }
         .onChange(of: pickerItem) { _, new in loadPicked(new) }
+        .confirmationDialog("Use this photo?", isPresented: $showConfirm, titleVisibility: .visible) {
+            Button("Use Photo") { confirmPending() }
+            Button("Cancel", role: .cancel) { cancelPending() }
+        } message: {
+            Text("It'll replace the sample so you can simulate color blindness on your own screen.")
+        }
+    }
+
+    // MARK: Intro
+
+    private var intro: some View {
+        Text("See how a screenshot looks to people with different types of color blindness. Tap a type below to simulate it — or choose your own photo.")
+            .font(Typography.callout)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: Image area
@@ -81,21 +83,17 @@ struct CVDSimulatorView: View {
         }
         .frame(height: 300)
         .overlay(alignment: .topLeading) {
-            if simulating {
-                Text(type.title.uppercased())
-                    .font(Typography.eyebrow).foregroundStyle(.white)
-                    .padding(.horizontal, Spacing.sm).padding(.vertical, Spacing.xxs)
-                    .background(Capsule().fill(.black.opacity(0.55)))
-                    .padding(Spacing.md)
-            }
+            Text("\(isConfirmed ? "YOUR PHOTO" : "SAMPLE") · \(type.title.uppercased())")
+                .font(Typography.eyebrow).foregroundStyle(.white)
+                .padding(.horizontal, Spacing.sm).padding(.vertical, Spacing.xxs)
+                .background(Capsule().fill(.black.opacity(0.55)))
+                .padding(Spacing.md)
         }
         .overlay(alignment: .topTrailing) {
             if isConfirmed { removeButton }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(simulating
-            ? "\(isConfirmed ? "Your photo" : "Sample"), simulated as \(type.title)"
-            : "Selected photo, awaiting confirmation")
+        .accessibilityLabel("\(isConfirmed ? "Your photo" : "Built-in sample"), simulated as \(type.title)")
     }
 
     private var removeButton: some View {
@@ -112,28 +110,17 @@ struct CVDSimulatorView: View {
         .accessibilityHint("Clears your photo and returns to the sample")
     }
 
-    // MARK: Confirm bar (picked state)
-
-    private var confirmBar: some View {
-        VStack(spacing: Spacing.sm) {
-            Button { confirmPhoto() } label: {
-                Label("Use This Photo", systemImage: "checkmark")
-                    .font(Typography.headline).foregroundStyle(ColorTokens.onBrand)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Capsule().fill(ColorTokens.brandPrimary))
-            }
-            .buttonStyle(.pressableCard)
-            Button { cancelPick() } label: {
-                Text("Cancel")
-                    .font(Typography.subheadline.weight(.semibold))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .frame(minHeight: 44)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
     // MARK: Chips
+
+    private var chipsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("TAP A TYPE TO SIMULATE")
+                .font(Typography.eyebrow)
+                .foregroundStyle(ColorTokens.textTertiary)
+            typePicker
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     private var typePicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -148,8 +135,10 @@ struct CVDSimulatorView: View {
                             .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm)
                             .frame(minHeight: 44)
                             .background(Capsule().fill(type == t ? ColorTokens.brandPrimary : ColorTokens.surfaceElevated))
+                            .overlay(Capsule().stroke(type == t ? Color.clear : ColorTokens.border, lineWidth: 0.5))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Simulate \(t.title)")
                     .accessibilityAddTraits(type == t ? [.isButton, .isSelected] : .isButton)
                 }
             }
@@ -162,7 +151,7 @@ struct CVDSimulatorView: View {
     @ViewBuilder private var photoPickerButton: some View {
         if isConfirmed {
             // Locked while a photo is confirmed — remove it (✕) to swap.
-            Label("Remove the photo to choose another", systemImage: "lock.fill")
+            Label("Tap ✕ on the photo to choose another", systemImage: "lock.fill")
                 .font(Typography.subheadline.weight(.semibold))
                 .foregroundStyle(ColorTokens.textTertiary)
                 .frame(maxWidth: .infinity, minHeight: 48)
@@ -170,61 +159,50 @@ struct CVDSimulatorView: View {
                 .opacity(0.6)
                 .accessibilityHidden(true)
         } else {
-            let empty: Bool = { if case .empty = imageState { return true }; return false }()
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                Label(empty ? "Choose a screenshot" : "Choose a different photo",
-                      systemImage: "photo.on.rectangle")
+                Label("Choose a screenshot", systemImage: "photo.on.rectangle")
                     .font(Typography.headline)
-                    .foregroundStyle(empty ? ColorTokens.onBrand : ColorTokens.brandPrimaryInk)
+                    .foregroundStyle(ColorTokens.onBrand)
                     .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(Capsule().fill(empty ? ColorTokens.brandPrimary
-                                                     : ColorTokens.brandPrimary.opacity(0.12)))
+                    .background(Capsule().fill(ColorTokens.brandPrimary))
             }
+            .accessibilityLabel("Choose a screenshot from your photo library")
         }
     }
 
     // MARK: Flow actions
 
-    private func confirmPhoto() {
-        if case let .picked(img) = imageState {
-            imageState = .confirmed(img)
-            type = .normal
-            Haptics.success()
-            render()
-        }
-    }
-
-    private func cancelPick() {
-        imageState = .empty
-        pickerItem = nil
+    private func confirmPending() {
+        guard let img = pendingImage else { return }
+        confirmedImage = img
+        pendingImage = nil
         type = .normal
+        Haptics.success()
         render()
     }
 
+    private func cancelPending() {
+        pendingImage = nil
+        pickerItem = nil
+        render() // revert to whatever was showing (sample or prior confirmed)
+    }
+
     private func removePhoto() {
-        imageState = .empty
+        confirmedImage = nil
         pickerItem = nil
         type = .normal
-        display = nil
         Haptics.light()
         render()
     }
 
     // MARK: Processing
 
-    /// The image the shown/filtered result is derived from for the current state.
-    private var baseImage: UIImage? {
-        switch imageState {
-        case .empty:               return sample
-        case let .picked(img):     return img
-        case let .confirmed(img):  return img
-        }
-    }
+    /// The image the shown/filtered result is derived from.
+    private var baseImage: UIImage? { confirmedImage ?? sample }
 
     private func render() {
         guard let base = baseImage else { return }
-        let effective: CVDType = simulating ? type : .normal
-        display = Self.apply(effective, to: base) ?? base
+        display = Self.apply(type, to: base) ?? base
     }
 
     private func loadPicked(_ item: PhotosPickerItem?) {
@@ -233,9 +211,8 @@ struct CVDSimulatorView: View {
             if let data = try? await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
                 await MainActor.run {
-                    imageState = .picked(img)
-                    type = .normal
-                    render()
+                    pendingImage = img
+                    showConfirm = true
                 }
             }
         }

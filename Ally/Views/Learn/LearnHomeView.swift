@@ -83,6 +83,7 @@ struct LearnHomeView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(ColorTokens.textTertiary)
+                .accessibilityHidden(true)
             TextField("Search topics", text: $searchText)
                 .font(Typography.body)
                 .textInputAutocapitalization(.never)
@@ -94,6 +95,8 @@ struct LearnHomeView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Clear search")
             }
@@ -134,7 +137,7 @@ struct LearnHomeView: View {
                 .font(Typography.subheadline.weight(.semibold))
                 .foregroundStyle(selected ? ColorTokens.onBrand : ColorTokens.textSecondary)
                 .padding(.horizontal, Spacing.md)
-                .frame(minHeight: 40)
+                .frame(minHeight: 44)
                 .background(Capsule().fill(selected ? color : ColorTokens.surfaceElevated))
                 .overlay(Capsule().stroke(selected ? Color.clear : ColorTokens.border, lineWidth: 0.5))
         }
@@ -198,27 +201,34 @@ struct LearnHomeView: View {
 
     private func sectionHeader(_ category: AccessibilityCategory, count: Int) -> some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: category.symbol)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(category.inkColor)
-            Text(category.title)
-                .font(Typography.title3)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Text("\(count)")
-                .font(Typography.caption.weight(.bold))
-                .foregroundStyle(category.inkColor)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(category.color.opacity(0.16)))
+            HStack(spacing: Spacing.sm) {
+                CategoryIllustration(category: category, size: 34)
+                Text(category.title)
+                    .font(Typography.title3)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("\(count)")
+                    .font(Typography.caption.weight(.bold))
+                    .foregroundStyle(category.inkColor)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(category.color.opacity(0.16)))
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(category.title), \(count) topics")
+            .accessibilityAddTraits(.isHeader)
+
             Spacer(minLength: 0)
+
             NavigationLink(value: category) {
                 Text("See all")
                     .font(Typography.footnote.weight(.semibold))
                     .foregroundStyle(category.inkColor)
+                    .padding(.horizontal, Spacing.sm)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("See all \(category.title) topics")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(category.title), \(count) topics")
     }
 
     // MARK: Shared card builder (staggered entrance)

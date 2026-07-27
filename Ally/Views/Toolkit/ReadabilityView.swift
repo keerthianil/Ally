@@ -12,6 +12,7 @@ struct ReadabilityView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
+                intro
                 editor
                 gradeCard
                 statRow
@@ -26,9 +27,16 @@ struct ReadabilityView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    private var intro: some View {
+        Text("Paste any copy — a button label, an onboarding line, an error message — to see how hard it is to read, and get simpler word swaps.")
+            .font(Typography.callout)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     private var editor: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("YOUR COPY").font(Typography.eyebrow).foregroundStyle(ColorTokens.textSecondary)
+            Text("EDIT YOUR COPY HERE").font(Typography.eyebrow).foregroundStyle(ColorTokens.textSecondary)
             TextEditor(text: $text)
                 .font(Typography.body)
                 .frame(minHeight: 120)

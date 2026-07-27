@@ -103,6 +103,9 @@ private struct AllyTabBar: View {
                         .matchedGeometryEffect(id: "selectedTab", in: indicator)
                 }
             }
+            // Make the full padded frame — not just the glyph — the tap/AX target,
+            // so every tab clears the 44pt minimum (verified by the a11y audit).
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .allyAnimation(AnimationTokens.spring, value: selection)

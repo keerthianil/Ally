@@ -27,6 +27,10 @@ struct WCAGReferenceView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
+                Text("Every WCAG 2.2 criterion Ally covers, in plain words. Search or filter by principle — tap a card with an arrow to open its lesson.")
+                    .font(Typography.callout)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 filterRow
                 ForEach(grouped, id: \.0) { principle, items in
                     VStack(alignment: .leading, spacing: Spacing.sm) {

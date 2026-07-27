@@ -33,3 +33,27 @@ targets:
         # Toolkit's Color Blindness Simulator can pull from camera or photo library.
         INFOPLIST_KEY_NSCameraUsageDescription: "Ally uses the camera to preview how your design looks through different types of color blindness."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Ally reads a screenshot you choose so it can simulate color blindness on it."
+
+  AllyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AllyUITests
+    dependencies:
+      - target: Ally
+    settings:
+      base:
+        TEST_TARGET_NAME: Ally
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.keerthia.AllyUITests
+        SWIFT_VERSION: "5.9"
+
+schemes:
+  Ally:
+    build:
+      targets:
+        Ally: all
+        AllyUITests: [test]
+    test:
+      targets:
+        - AllyUITests

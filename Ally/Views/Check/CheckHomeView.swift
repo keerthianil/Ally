@@ -168,9 +168,10 @@ private struct SwipeableProjectRow: View {
             .buttonStyle(.pressableCard)
             .offset(x: offset)
             .highPriorityGesture(swipe)
+            .accessibilityHint("Swipe left for delete")
+            .accessibilityAction(named: "Delete") { onRequestDelete() }
         }
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-        .accessibilityAction(named: "Delete") { onRequestDelete() }
     }
 
     private var deleteAction: some View {
@@ -249,22 +250,41 @@ private struct ProjectCard: View {
 
 // MARK: - Empty state
 
+/// The four category dots gently orbit the central seal — a small piece of life
+/// on the empty state. Pauses (and settles into a composed ring) under Reduce
+/// Motion, and is decorative to VoiceOver.
+private struct OrbitingDots: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
+            let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { i, cat in
+                    let angle = t * 0.6 + Double(i) / 4 * 2 * .pi
+                    let radius = 40 + 4 * sin(t * 1.5 + Double(i))
+                    Circle().fill(cat.color.opacity(0.9))
+                        .frame(width: 24, height: 24)
+                        .offset(x: radius * cos(angle), y: radius * sin(angle))
+                }
+                Circle().fill(ColorTokens.surfaceElevated).frame(width: 46, height: 46)
+                    .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(ColorTokens.brandPrimary)
+                    .scaleEffect(reduceMotion ? 1 : 1 + 0.04 * sin(t * 1.5))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
 private struct EmptyCheckState: View {
     var onStart: () -> Void
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            ZStack {
-                ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { i, cat in
-                    Circle().fill(cat.color.opacity(0.9))
-                        .frame(width: 26, height: 26)
-                        .offset(x: [-30, 30, -30, 30][i], y: [-30, -30, 30, 30][i])
-                }
-                Circle().fill(ColorTokens.surfaceElevated).frame(width: 44, height: 44)
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(ColorTokens.brandPrimary)
-            }
-            .frame(height: 110)
+            OrbitingDots()
+                .frame(height: 110)
 
             Text("Your first check awaits")
                 .font(Typography.title2).foregroundStyle(ColorTokens.textPrimary)
