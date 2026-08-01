@@ -1,9 +1,13 @@
 import SwiftUI
 
-/// The moment of payoff. After the last checkpoint, the score sweeps in on the
-/// signature ring with a band-specific, encouraging headline (and confetti for
-/// high scores) — *then* the user taps through to the dense report. Celebrate
-/// first, analyze second.
+/// The moment of payoff. The score sweeps in on the signature ring, the band
+/// reacts, and only then does the user tap through to the dense report.
+/// Celebrate first, analyse second.
+///
+/// The reaction is band-specific in *energy*, never in approval. See
+/// `CelebrationBand`: confetti at 42 out of 100 reads as sarcasm, but a low
+/// score getting nothing at all reads as a verdict, and accessibility guilt is
+/// the exact feeling this app exists to remove.
 struct CheckCelebrationView: View {
     @Bindable var project: Project
     var onSeeReport: () -> Void
@@ -14,23 +18,7 @@ struct CheckCelebrationView: View {
 
     private var result: ScoreEngine.Result { ScoreEngine.result(for: project) }
 
-    /// Encouraging, warm copy by score band — never punishing, even at the low end.
-    private var band: (headline: String, subtitle: String, sparkle: Bool) {
-        switch result.overall {
-        case 80...:
-            return ("Amazing work!",
-                    "This project clears the bar most apps miss. Share the report and keep it there.",
-                    true)
-        case 60..<80:
-            return ("Getting there!",
-                    "A solid, accessible foundation, a few focused fixes will push it into the green.",
-                    true)
-        default:
-            return ("Great start!",
-                    "You showed up and measured it, that's more than most teams ever do. Here's exactly what to tackle first.",
-                    false)
-        }
-    }
+    private var band: CelebrationBand { CelebrationBand(score: result.overall) }
 
     var body: some View {
         VStack(spacing: Spacing.xl) {
@@ -73,12 +61,13 @@ struct CheckCelebrationView: View {
         .padding(Spacing.xl)
         .padding(.bottom, 100) // clear the floating tab bar
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AllyBackground(accent: ColorTokens.scoreColor(result.overall)))
-        .overlay(ConfettiView(trigger: confettiTrigger))
-        // For high scores under Reduce Motion, ConfettiView renders nothing; a
-        // static sparkle keeps the moment celebratory without vestibular risk.
+        .background(AllyBackground(accent: band.accent))
+        .overlay(CelebrationEffect(band: band, trigger: confettiTrigger))
+        // Confetti is the one effect that renders nothing under Reduce Motion,
+        // so the top band keeps a static sparkle. The other three already
+        // resolve to a composed still of themselves.
         .overlay(alignment: .top) {
-            if band.sparkle && reduceMotion {
+            if band == .amazing && reduceMotion {
                 Image(systemName: "sparkles")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundStyle(ColorTokens.celebration)
@@ -98,13 +87,11 @@ struct CheckCelebrationView: View {
                                    : AnimationTokens.spring.delay(delay)) {
             showText = true
         }
-        if band.sparkle {
-            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.7)) {
-                confettiTrigger += 1
-                Haptics.success()
-            }
-        } else {
-            Haptics.light()
+        // The effect lands just after the ring settles, and the haptic weight
+        // matches the visual weight rather than always being a success buzz.
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.7)) {
+            confettiTrigger += 1
+            band.playHaptic()
         }
     }
 }

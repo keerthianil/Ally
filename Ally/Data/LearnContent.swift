@@ -125,6 +125,30 @@ enum LearnContent {
             wcagTitle: "Images of Text",
             testYourself: "Find any text living inside an image asset — could it be real text instead?",
             demo: .none
+        ),
+        LearnTopic(
+            id: "contrast-settings",
+            category: .vision,
+            title: "Respect Increase Contrast",
+            whatItIs: "iOS lets people ask for stronger contrast and solid backgrounds, and your app has to actually change when they do.",
+            whoItHurts: "Low-vision users, people with cataracts, and anyone with glare sensitivity, who turn these on system wide.",
+            whyItMatters: "Blur and translucency look great in a design review and dissolve in real use. When these settings are on, go fully opaque and stop using blur to separate layers.",
+            wcagRef: "iOS platform",
+            wcagTitle: "Increase Contrast and Reduce Transparency",
+            testYourself: "Settings, Accessibility, Display and Text Size. Turn on Increase Contrast and Reduce Transparency, then reopen every screen that uses a blur.",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "reflow-at-ax-sizes",
+            category: .vision,
+            title: "Survive the Biggest Text Size",
+            whatItIs: "Your layout has to reflow into one readable column at the largest accessibility text sizes, with no sideways scrolling.",
+            whoItHurts: "People who run their phone at AX3 or AX5 every day, often older users and people with low vision.",
+            whyItMatters: "Supporting Dynamic Type is not the same as surviving it. Side-by-side buttons and fixed-height cards break long before AX5.",
+            wcagRef: "1.4.10",
+            wcagTitle: "Reflow",
+            testYourself: "Settings, Accessibility, Larger Text. Switch on Larger Accessibility Sizes, drag to maximum, then walk every screen.",
+            demo: .none
         )
     ]
 
@@ -200,6 +224,42 @@ enum LearnContent {
             wcagRef: "2.5.4",
             wcagTitle: "Motion Actuation",
             testYourself: "Does every shake/tilt gesture have an on-screen equivalent?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "orientation",
+            category: .motor,
+            title: "Work in Both Orientations",
+            whatItIs: "Do not lock your app to portrait unless the content genuinely requires one orientation.",
+            whoItHurts: "People whose iPhone is clamped to a wheelchair, a bed mount, or a desk arm in a position they cannot rotate.",
+            whyItMatters: "If the phone is mounted in landscape and your app only draws in portrait, the whole app is sideways for that person forever.",
+            wcagRef: "1.3.4",
+            wcagTitle: "Orientation",
+            testYourself: "Rotate your phone to landscape on every screen. Anything that refuses to rotate, or rotates and breaks, is the bug.",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "pointer-cancellation",
+            category: .motor,
+            title: "Let People Take It Back",
+            whatItIs: "Fire the action when the finger lifts, not the instant it lands, so a mis-tap can be slid away from.",
+            whoItHurts: "People with tremors or spasms, people with a weak grip, and anyone tapping on a moving bus.",
+            whyItMatters: "Acting on touch-up lets someone who lands on the wrong control drag off it and let go safely. SwiftUI Buttons do this already; hand-rolled gestures often do not.",
+            wcagRef: "2.5.2",
+            wcagTitle: "Pointer Cancellation",
+            testYourself: "Press and hold a custom control, drag your finger off it, then lift. If the action still fired, you are triggering on touch-down.",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "switch-scanning",
+            category: .motor,
+            title: "Design for Switch Scanning",
+            whatItIs: "Switch users step through your screen one element at a time, so group related things and keep the number of stops low.",
+            whoItHurts: "People who operate an iPhone with a single button, a head switch, or sip-and-puff, often people with cerebral palsy, ALS, or a spinal cord injury.",
+            whyItMatters: "Every ungrouped element is another scan step and another wait. Forty flat items is technically operable and practically unusable.",
+            wcagRef: "iOS platform",
+            wcagTitle: "Switch Control",
+            testYourself: "Settings, Accessibility, Switch Control. Set the full screen as a switch, then count the taps to reach your main action.",
             demo: .none
         )
     ]
@@ -283,7 +343,7 @@ enum LearnContent {
             whoItHurts: "People with cognitive disabilities who can't solve CAPTCHAs or recall codes.",
             whyItMatters: "Logging in shouldn't be a cognitive gauntlet. Allow paste, password managers, and Face ID. New in WCAG 2.2.",
             wcagRef: "3.3.8",
-            wcagTitle: "Accessible Authentication",
+            wcagTitle: "Accessible Authentication (Minimum)",
             testYourself: "Does your login allow password-manager autofill and paste?",
             demo: .textReveal(
                 before: "Solve this puzzle and re-type the 6-digit code from memory.",
@@ -300,6 +360,54 @@ enum LearnContent {
             wcagRef: "3.2.6",
             wcagTitle: "Consistent Help",
             testYourself: "Is your help/support entry point in the same location on every screen?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "labels-and-instructions",
+            category: .cognitive,
+            title: "Labels, Not Just Placeholders",
+            whatItIs: "Every input needs a visible label and its rules stated up front, not only grey text sitting inside the box.",
+            whoItHurts: "People with memory or attention differences, who lose the placeholder the moment they start typing.",
+            whyItMatters: "Placeholder text is low contrast, it vanishes on the first keystroke, and it hides format rules until after you have got them wrong.",
+            wcagRef: "3.3.2",
+            wcagTitle: "Labels or Instructions",
+            testYourself: "Fill in your longest form halfway, then screenshot it. Can you still tell what every field is asking for?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "input-purpose",
+            category: .cognitive,
+            title: "Let Autofill Do the Typing",
+            whatItIs: "Tell iOS what each field is for so it can offer the right saved name, address, email, password, or one-time code.",
+            whoItHurts: "People with dyslexia, people with limited dexterity, and people with memory difficulties, for whom typing an address by hand is slow and error-prone.",
+            whyItMatters: "Setting textContentType turns a twelve-field checkout into a couple of taps. Leave it unset and everybody types everything, every time.",
+            wcagRef: "1.3.5",
+            wcagTitle: "Identify Input Purpose",
+            testYourself: "Open your sign-up form with a saved contact card. Does the QuickType bar offer the right thing above the keyboard on each field?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "pause-stop-hide",
+            category: .cognitive,
+            title: "Let People Stop the Movement",
+            whatItIs: "Anything that moves, blinks, or updates on its own for more than a few seconds needs a way to pause it.",
+            whoItHurts: "People with ADHD or anxiety who cannot read past a looping carousel, and low-vision people using Zoom, who lose their place when content shifts.",
+            whyItMatters: "Auto-rotating banners and live tickers pull attention off the task and never give it back. COGA guidance is blunt: let people switch the distraction off.",
+            wcagRef: "2.2.2",
+            wcagTitle: "Pause, Stop, Hide",
+            testYourself: "List everything on your screens that moves without being touched. For each, can a person stop it without leaving the screen?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "language",
+            category: .cognitive,
+            title: "Say What Language This Is",
+            whatItIs: "Mark the language of your content so the screen reader pronounces it with the right voice.",
+            whoItHurts: "Blind users reading in a language other than their phone default, and bilingual users hitting a Spanish surname in English copy.",
+            whyItMatters: "When the language is unset, VoiceOver reads French with an English voice and the words come out as noise. Hardcoded and mixed-language strings are where this breaks.",
+            wcagRef: "3.1.1",
+            wcagTitle: "Language of Page",
+            testYourself: "Switch your phone to another language you read, turn on VoiceOver, and listen. Does anything come out as gibberish?",
             demo: .none
         )
     ]
@@ -391,6 +499,66 @@ enum LearnContent {
             wcagRef: "2.3.3",
             wcagTitle: "Animation from Interactions",
             testYourself: "Turn on Reduce Motion — do your animations become gentle crossfades?",
+            demo: .none
+        )
+    ,        LearnTopic(
+            id: "label-in-name",
+            category: .navigation,
+            title: "Say What the Button Says",
+            whatItIs: "A control accessibility label must contain the words a person can actually see on it.",
+            whoItHurts: "Voice Control users who drive their phone by speaking button names out loud, including people with spinal cord injuries or severe RSI.",
+            whyItMatters: "If the button reads Send but the label is submit_cta, saying Tap Send does nothing and the person is stranded on that screen.",
+            wcagRef: "2.5.3",
+            wcagTitle: "Label in Name",
+            testYourself: "Settings, Accessibility, Voice Control. Say Tap plus the visible text of five buttons. Count how many respond.",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "focus-not-obscured",
+            category: .navigation,
+            title: "Do Not Hide the Focused Control",
+            whatItIs: "When something receives keyboard or switch focus, your own interface must not cover it up.",
+            whoItHurts: "People using a Bluetooth keyboard, Switch Control, or Full Keyboard Access, who can tell focus moved but cannot see where.",
+            whyItMatters: "Sticky headers, floating buttons, and the keyboard accessory bar routinely sit on top of the thing that just got focus. New in WCAG 2.2.",
+            wcagRef: "2.4.11",
+            wcagTitle: "Focus Not Obscured (Minimum)",
+            testYourself: "Pair a keyboard, turn on Full Keyboard Access, and Tab down a long form. Does focus ever slide under your sticky header?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "voiceover-actions",
+            category: .navigation,
+            title: "Custom Actions and the Rotor",
+            whatItIs: "Give VoiceOver users a short spoken menu of actions on an item instead of a row of tiny buttons to swipe past.",
+            whoItHurts: "Blind VoiceOver users, who otherwise swipe through Edit, Share, Pin, and Delete on every single row of a long list.",
+            whyItMatters: "Collapsing a row buttons into custom actions turns dozens of swipes into one. The rotor is also how blind people skim, and most apps never offer one.",
+            wcagRef: "iOS platform",
+            wcagTitle: "VoiceOver custom actions and rotor",
+            testYourself: "Turn on VoiceOver, focus a list row with several buttons, then swipe up and down with one finger. Nothing offered means no custom actions.",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "feedback-channels",
+            category: .navigation,
+            title: "Never Only a Buzz",
+            whatItIs: "If a haptic tap or a sound is the only way someone learns what happened, some people learn nothing.",
+            whoItHurts: "Deaf and hard of hearing users, people who keep the phone silent, people who switch System Haptics off, and anyone whose phone is face-down.",
+            whyItMatters: "A success buzz with no visible confirmation and no announcement is a message sent into the void. Pair every haptic with something on screen.",
+            wcagRef: "iOS platform",
+            wcagTitle: "Haptics and sound as a sole channel",
+            testYourself: "Settings, Sounds and Haptics, turn System Haptics off, and flip to silent. Complete a save. Do you still know it worked?",
+            demo: .none
+        ),
+        LearnTopic(
+            id: "screen-titles",
+            category: .navigation,
+            title: "Every Screen Says Where You Are",
+            whatItIs: "Each screen needs a clear title that describes it and that VoiceOver reaches straight away.",
+            whoItHurts: "VoiceOver users navigating a deep stack of pushed screens with no idea which one they just landed on.",
+            whyItMatters: "In an app this is the navigation title, marked as a heading, announced first after a push. Without it, backing out three screens is guesswork.",
+            wcagRef: "2.4.2",
+            wcagTitle: "Page Titled",
+            testYourself: "Turn on VoiceOver, push four screens deep, then swipe back one at a time. Does each screen announce its own name?",
             demo: .none
         )
     ]

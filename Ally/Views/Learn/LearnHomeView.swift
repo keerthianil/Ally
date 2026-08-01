@@ -8,14 +8,13 @@ import SwiftUI
 /// - **Browsing** shows the four lenses as four cards, and nothing else. You do
 ///   not know what you are looking for yet, so the only decision on screen is
 ///   which kind of person you are designing for. Tapping opens that lens.
-/// - **Searching or filtering** switches to a vertical masonry column pair. You
+/// - **Searching** switches to a vertical masonry column pair. You
 ///   have a target, so the layout stops being scenic and starts being a list
 ///   you can scan. Varied heights keep it from reading as a spreadsheet.
 ///
 /// No progress tracking anywhere: you reference this, you don't finish it.
 struct LearnHomeView: View {
     @State private var searchText = ""
-    @State private var selectedCategory: AccessibilityCategory?
     @State private var appeared = false
     @State private var showingAssistant = false
     /// Set when the assistant's citation is tapped, so the sheet can hand off
@@ -23,9 +22,9 @@ struct LearnHomeView: View {
     @State private var assistantTopic: LearnTopic?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Topics after applying the active category chip and search text.
+    /// Topics matching the search text.
     private var filtered: [LearnTopic] {
-        let base = selectedCategory.map { LearnContent.topics(for: $0) } ?? LearnContent.all
+        let base = LearnContent.all
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return base }
         return base.filter {
@@ -33,8 +32,11 @@ struct LearnHomeView: View {
         }
     }
 
+    /// Searching is the only thing that swaps the layout now. Picking a lens
+    /// navigates rather than filtering in place, so there is exactly one control
+    /// on this screen that changes what it shows.
     private var isBrowsing: Bool {
-        selectedCategory == nil && searchText.trimmingCharacters(in: .whitespaces).isEmpty
+        searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -43,7 +45,6 @@ struct LearnHomeView: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     hero
                     searchRow
-                    categoryChips
                     if isBrowsing {
                         lensCards
                     } else {
@@ -55,9 +56,18 @@ struct LearnHomeView: View {
                 .padding(.top, Spacing.md)
                 .padding(.bottom, 120)
             }
-            .background(AllyBackground())
+            .background(
+                AllyBackground()
+                    // A tap anywhere off the field puts the keyboard away.
+                    // `scrollDismissesKeyboard` only fires on a drag, so a plain
+                    // tap on the background used to leave it up with nowhere
+                    // obvious to go.
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissKeyboard() }
+            )
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.immediately)
+            .tracksTabBar()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: AccessibilityCategory.self) { CategoryDetailView(category: $0) }
             .navigationDestination(for: LearnTopic.self) { TopicDetailView(topic: $0) }
@@ -157,43 +167,9 @@ struct LearnHomeView: View {
         .padding(.horizontal, Spacing.xl)
     }
 
-    // MARK: Chips
-
-    private var categoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
-                chip(title: "All", ink: ColorTokens.brandPrimaryInk, selected: selectedCategory == nil) {
-                    selectedCategory = nil
-                }
-                ForEach(AccessibilityCategory.allCases) { cat in
-                    chip(title: cat.title, ink: cat.inkColor, selected: selectedCategory == cat) {
-                        selectedCategory = cat
-                    }
-                }
-            }
-            .padding(.horizontal, Spacing.xl)
-        }
-        .horizontalScrollFade()
-    }
-
-    /// The selected chip fills with the category *ink*, not its pastel fill,
-    /// which could not carry legible text at any weight.
-    private func chip(title: String, ink: Color, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            Haptics.selection()
-            withAnimation(AnimationTokens.snappy) { action() }
-        } label: {
-            Text(title)
-                .font(Typography.subheadline.weight(.semibold))
-                .foregroundStyle(selected ? ColorTokens.onFill(ink) : ColorTokens.textSecondary)
-                .padding(.horizontal, Spacing.md)
-                .frame(minHeight: 44)
-                .background(Capsule().fill(selected ? ink : ColorTokens.surfaceElevated))
-                .overlay(Capsule().stroke(selected ? Color.clear : ColorTokens.border, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title) topics")
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil)
     }
 
     // MARK: Browse — the four lenses

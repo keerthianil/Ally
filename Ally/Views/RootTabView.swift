@@ -12,6 +12,7 @@ struct RootTabView: View {
         return .learn
     }()
     @Namespace private var indicator
+    @State private var visibility = TabBarVisibility()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,8 +27,11 @@ struct RootTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            AllyTabBar(selection: $selection, indicator: indicator)
+            AllyTabBar(selection: $selection, indicator: indicator, visibility: visibility)
         }
+        .environment(\.tabBarVisibility, visibility)
+        // Each tab tracks its own scroll, so switching tabs has to start clean.
+        .onChange(of: selection) { _, _ in visibility.reset() }
     }
 
     enum Tab: String, CaseIterable, Identifiable {
@@ -54,12 +58,22 @@ struct RootTabView: View {
 private struct AllyTabBar: View {
     @Binding var selection: RootTabView.Tab
     var indicator: Namespace.ID
+    var visibility: TabBarVisibility
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Collapsed shows only the current tab, still tappable, and tapping it
+    /// brings the others back. It never disappears: a control that vanishes
+    /// mid-reach is a motor failure, and one that is off screen cannot be
+    /// reached by Switch Control or named by Voice Control at all.
+    private var collapsed: Bool { visibility.isCollapsed }
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
             ForEach(RootTabView.Tab.allCases) { tab in
-                item(for: tab)
+                if !collapsed || tab == selection {
+                    item(for: tab)
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
             }
         }
         .padding(Spacing.xs)
@@ -73,6 +87,16 @@ private struct AllyTabBar: View {
         )
         .padding(.horizontal, Spacing.xxl)
         .padding(.bottom, Spacing.sm)
+        // Tapping the collapsed pill expands it, so reaching another tab never
+        // requires scrolling back up first.
+        .onTapGesture {
+            guard collapsed else { return }
+            Haptics.light()
+            visibility.expand()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(collapsed ? "Tabs, collapsed. Currently \(selection.title)." : "Tabs")
+        .accessibilityHint(collapsed ? "Activate to show all tabs" : "")
     }
 
     private func item(for tab: RootTabView.Tab) -> some View {

@@ -38,6 +38,7 @@ struct CheckHomeView: View {
             }
             .background(AllyBackground())
             .scrollIndicators(.hidden)
+            .tracksTabBar()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: CheckRoute.self) { route in
                 switch route {
@@ -244,10 +245,13 @@ private struct ProjectCard: View {
                 } else {
                     Text("Start").font(Typography.subheadline.weight(.semibold))
                         .foregroundStyle(ColorTokens.brandPrimaryInk)
-                        .padding(.trailing, Spacing.lg)
                 }
             }
             .padding(Spacing.lg)
+            // The notch eats the top-trailing corner, so the row has to end
+            // before it. Without this the score ring and the "Start" label both
+            // slid under the glyph.
+            .padding(.trailing, Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(NotchedCard(notch: 38).fill(ColorTokens.surfaceElevated))
             .overlay(NotchedCard(notch: 38).stroke(ColorTokens.border, lineWidth: 1))

@@ -34,10 +34,14 @@ final class AssistantVocabularyTests: XCTestCase {
         }
     }
 
-    func testVOReachesTheLabelsTopic() {
+    /// Since the August 2026 content pass this lands on `voiceover-actions`,
+    /// which is a better answer than the old one: it is the topic actually about
+    /// testing with VoiceOver rather than about naming controls.
+    func testVOReachesAVoiceOverTopic() {
         let ids = topIDs("How do I test with VO?")
-        XCTAssertTrue(ids.contains("topic:labels") || ids.contains("topic:focus-order"),
-                      "VoiceOver questions should reach labels or focus order; got \(ids)")
+        let acceptable = ["topic:voiceover-actions", "topic:labels", "topic:label-in-name", "topic:focus-order"]
+        XCTAssertTrue(ids.contains(where: acceptable.contains),
+                      "VoiceOver questions should reach a VoiceOver topic; got \(ids)")
     }
 
     func testAAReachesContrast() {

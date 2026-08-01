@@ -30,6 +30,7 @@ struct ToolkitHomeView: View {
             }
             .background(AllyBackground())
             .scrollIndicators(.hidden)
+            .tracksTabBar()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ToolkitTool.self) { tool in
                 switch tool {
