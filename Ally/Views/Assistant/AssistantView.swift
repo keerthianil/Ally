@@ -80,7 +80,7 @@ struct AssistantView: View {
             if !aiStatus.isReady {
                 IntelligenceStatusCard(
                     status: aiStatus,
-                    fallbackNote: "Learn's search and category filters cover the same \(LearnContent.all.count) topics without it — close this and search there."
+                    fallbackNote: "Learn's search and category filters cover the same \(LearnContent.all.count) topics without it, close this and search there."
                 )
             } else {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -200,7 +200,7 @@ struct AssistantView: View {
 
     private func message(for failure: AllyAssistant.Failure) -> String {
         switch failure {
-        case .unavailable: return "I can't answer questions on this iPhone — that needs Apple Intelligence. Learn's search covers the same topics."
+        case .unavailable: return "I can't answer questions on this iPhone, that needs Apple Intelligence. Learn's search covers the same topics."
         case .refused:     return "I couldn't answer that one. Try rephrasing it."
         case .failed:      return "Something went wrong. Try asking again."
         }

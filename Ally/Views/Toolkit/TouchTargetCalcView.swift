@@ -29,7 +29,7 @@ struct TouchTargetCalcView: View {
     }
 
     private var intro: some View {
-        Text("Set a button's size to check it's easy to tap for everyone — including people with tremors or big fingers. Drag the sliders; the box updates live against each platform's minimum.")
+        Text("Set a button's size to check it's easy to tap for everyone, including people with tremors or big fingers. Drag the sliders; the box updates live against each platform's minimum.")
             .font(Typography.callout)
             .foregroundStyle(ColorTokens.textSecondary)
             .fixedSize(horizontal: false, vertical: true)

@@ -14,9 +14,9 @@ struct ContrastCheckerView: View {
     /// One-line, plain-English reading of the ratio.
     private var plainVerdict: (text: String, color: Color) {
         switch ratio {
-        case 7...:      return ("Excellent — passes even the strictest standard (AAA).", ColorTokens.successInk)
+        case 7...:      return ("Excellent, passes even the strictest standard (AAA).", ColorTokens.successInk)
         case 4.5..<7:   return ("This passes the most common standard (AA).", ColorTokens.successInk)
-        case 3..<4.5:   return ("Only large or bold text passes here — too low for body text.", ColorTokens.warningInk)
+        case 3..<4.5:   return ("Only large or bold text passes here, too low for body text.", ColorTokens.warningInk)
         default:        return ("This contrast is hard to read for many users.", ColorTokens.errorInk)
         }
     }

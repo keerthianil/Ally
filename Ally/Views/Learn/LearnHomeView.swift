@@ -79,7 +79,7 @@ struct LearnHomeView: View {
             Text("Learn")
                 .font(Typography.display)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("Your plain-English cheat sheet for accessibility. Search a term or browse by lens — \(LearnContent.all.count) topics, zero jargon.")
+            Text("Your plain-English cheat sheet for accessibility. Search a term or browse by lens, \(LearnContent.all.count) topics, zero jargon.")
                 .font(Typography.callout)
                 .foregroundStyle(ColorTokens.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

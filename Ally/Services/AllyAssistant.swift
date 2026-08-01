@@ -54,7 +54,7 @@ enum AllyAssistant {
                     generating: GroundedAnswer.self
                 )
                 let value = response.content
-                let text = value.answer.trimmingCharacters(in: .whitespacesAndNewlines)
+                let text = HouseStyle.clean(value.answer)
                 guard !text.isEmpty else { throw Failure.failed }
 
                 // Trust the retrieval, not the model, for attribution: if it cites
@@ -78,13 +78,13 @@ enum AllyAssistant {
     private static func outOfScopeAnswer(for question: String) -> Answer {
         if let nearest = AssistantCorpus.nearest(to: question) {
             return Answer(
-                text: "I don't cover that — I only answer from Ally's own topics and its WCAG reference. The closest thing I have is “\(nearest.title)”.",
+                text: "I don't cover that. I only answer from Ally's own topics and its WCAG reference, and the closest thing I have is “\(nearest.title)”.",
                 source: nearest,
                 isOutOfScope: true
             )
         }
         return Answer(
-            text: "I don't cover that. I only answer from Ally's \(LearnContent.all.count) topics and its WCAG quick reference — try asking about contrast, touch targets, labels, or focus order.",
+            text: "I don't cover that. I only answer from Ally's \(LearnContent.all.count) topics and its WCAG quick reference, so try asking about contrast, touch targets, labels, or focus order.",
             source: nil,
             isOutOfScope: true
         )
@@ -92,7 +92,7 @@ enum AllyAssistant {
 
     // MARK: Prompting
 
-    private static let instructions = """
+    private static let instructions: String = """
         You answer accessibility questions for designers and developers, using \
         ONLY the reference passages given to you in each prompt.
 
@@ -105,6 +105,8 @@ enum AllyAssistant {
         - Do not mention "the passages", "the context", or that you were given \
         reference material. Just answer.
         - Set sourceID to the id of the passage you leaned on most.
+
+        \(HouseStyle.voiceRules)
         """
 
     private static func prompt(question: String, passages: [AssistantCorpus.Passage]) -> String {

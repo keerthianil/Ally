@@ -18,7 +18,7 @@ struct NewProjectView: View {
                         Text("What are you checking?")
                             .font(Typography.title2)
                             .foregroundStyle(ColorTokens.textPrimary)
-                        Text("A project name and platform — that's it.")
+                        Text("A project name and platform, that's it.")
                             .font(Typography.subheadline)
                             .foregroundStyle(ColorTokens.textSecondary)
                     }

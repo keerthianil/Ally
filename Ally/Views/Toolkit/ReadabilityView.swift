@@ -52,7 +52,7 @@ struct ReadabilityView: View {
     }
 
     private var intro: some View {
-        Text("Paste any copy — a button label, an onboarding line, an error message — to see how hard it is to read, and get simpler word swaps.")
+        Text("Paste any copy, a button label, an onboarding line, an error message, to see how hard it is to read, and get simpler word swaps.")
             .font(Typography.callout)
             .foregroundStyle(ColorTokens.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -88,7 +88,7 @@ struct ReadabilityView: View {
         } else {
             IntelligenceStatusCard(
                 status: aiStatus,
-                fallbackNote: "The grade level, the stats and the jargon list below are plain arithmetic — they work on every iPhone."
+                fallbackNote: "The grade level, the stats and the jargon list below are plain arithmetic, they work on every iPhone."
             )
         }
     }

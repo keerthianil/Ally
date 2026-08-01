@@ -112,7 +112,7 @@ struct CheckHomeView: View {
                 .font(Typography.eyebrow).foregroundStyle(ColorTokens.brandPrimaryInk)
             Text("Check")
                 .font(Typography.display).foregroundStyle(ColorTokens.textPrimary)
-            Text("Score any project across the four lenses — and watch it improve.")
+            Text("Score any project across the four lenses, and watch it improve.")
                 .font(Typography.callout).foregroundStyle(ColorTokens.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

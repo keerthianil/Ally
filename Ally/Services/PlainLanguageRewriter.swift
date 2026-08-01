@@ -51,10 +51,10 @@ enum PlainLanguageRewriter {
                     generating: PlainRewrite.self
                 )
                 let value = response.content
-                let cleaned = value.rewrite.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleaned = HouseStyle.clean(value.rewrite)
                 guard !cleaned.isEmpty else { throw Failure.failed }
                 return Result(rewrite: cleaned,
-                              changes: value.changes.filter { !$0.isEmpty },
+                              changes: value.changes.map(HouseStyle.clean).filter { !$0.isEmpty },
                               stats: ReadabilityStats.analyze(cleaned))
             } catch let error as LanguageModelSession.GenerationError {
                 // Guardrails fire on text the model won't touch. That's a refusal,
@@ -72,7 +72,7 @@ enum PlainLanguageRewriter {
     /// Constrained hard, because an unconstrained "make this simpler" reliably
     /// returns something shorter that means something different — which for
     /// error messages and button labels is worse than the jargon.
-    private static let instructions = """
+    private static let instructions: String = """
         You rewrite user-interface copy so more people can understand it. You are \
         helping a designer meet WCAG 3.1.5 (Reading Level).
 
@@ -84,6 +84,8 @@ enum PlainLanguageRewriter {
         - Keep the original tone. If it is a button label, it stays a button label.
         - Do not add greetings, apologies, emoji, or commentary.
         - If the text is already plain, return it close to unchanged and say so.
+
+        \(HouseStyle.voiceRules)
         """
 }
 

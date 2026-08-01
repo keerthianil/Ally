@@ -50,7 +50,7 @@ struct CVDSimulatorView: View {
     // MARK: Intro
 
     private var intro: some View {
-        Text("See how a screenshot looks to people with different types of color blindness. Tap a type below to simulate it — or choose your own photo.")
+        Text("See how a screenshot looks to people with different types of color blindness. Tap a type below to simulate it, or choose your own photo.")
             .font(Typography.callout)
             .foregroundStyle(ColorTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -264,14 +264,14 @@ enum CVDType: String, CaseIterable, Identifiable {
 
     var explanation: String {
         switch self {
-        case .normal:        return "Typical color vision — for comparison."
-        case .protanopia:    return "No red cones — reds look dark, red/green confusable."
+        case .normal:        return "Typical color vision, for comparison."
+        case .protanopia:    return "No red cones, reds look dark, red/green confusable."
         case .protanomaly:   return "Reduced red sensitivity."
-        case .deuteranopia:  return "No green cones — the most common red/green type."
-        case .deuteranomaly: return "Reduced green sensitivity — the single most common CVD."
-        case .tritanopia:    return "No blue cones — blue/yellow confusable (rare)."
+        case .deuteranopia:  return "No green cones, the most common red/green type."
+        case .deuteranomaly: return "Reduced green sensitivity, the single most common CVD."
+        case .tritanopia:    return "No blue cones, blue/yellow confusable (rare)."
         case .tritanomaly:   return "Reduced blue sensitivity."
-        case .achromatopsia: return "No color at all — total color blindness (very rare)."
+        case .achromatopsia: return "No color at all, total color blindness (very rare)."
         }
     }
 

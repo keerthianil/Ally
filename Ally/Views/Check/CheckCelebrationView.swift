@@ -23,11 +23,11 @@ struct CheckCelebrationView: View {
                     true)
         case 60..<80:
             return ("Getting there!",
-                    "A solid, accessible foundation — a few focused fixes will push it into the green.",
+                    "A solid, accessible foundation, a few focused fixes will push it into the green.",
                     true)
         default:
             return ("Great start!",
-                    "You showed up and measured it — that's more than most teams ever do. Here's exactly what to tackle first.",
+                    "You showed up and measured it, that's more than most teams ever do. Here's exactly what to tackle first.",
                     false)
         }
     }
