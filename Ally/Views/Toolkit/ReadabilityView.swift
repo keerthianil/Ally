@@ -2,9 +2,23 @@ import SwiftUI
 
 /// Paste copy → Flesch-Kincaid grade + reading ease, sentence stats, and jargon
 /// flags with plainer suggestions. Live-updates as you type.
+///
+/// On iOS 26 hardware with Apple Intelligence, it will also propose a full plain
+/// -language rewrite. That's strictly additive: the grade, the stats and the
+/// jargon list are computed locally with arithmetic and work on every device
+/// Ally supports.
 struct ReadabilityView: View {
     @State private var text: String =
         "Utilize the aforementioned functionality to facilitate the authentication of your account credentials."
+
+    // MARK: Rewrite state
+    @State private var rewrite: PlainLanguageRewriter.Result?
+    @State private var rewriteError: PlainLanguageRewriter.Failure?
+    @State private var rewriteTask: Task<Void, Never>?
+    @State private var isRewriting = false
+    @State private var announcement = ""
+
+    private let aiStatus = AllyIntelligence.status
 
     private var stats: ReadabilityStats { ReadabilityStats.analyze(text) }
     private var jargon: [(word: String, suggestion: String)] { ReadabilityStats.jargonFlags(text) }
@@ -14,6 +28,7 @@ struct ReadabilityView: View {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 intro
                 editor
+                rewriteSection
                 gradeCard
                 statRow
                 if !jargon.isEmpty { jargonCard }
@@ -25,6 +40,15 @@ struct ReadabilityView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("Readability")
         .navigationBarTitleDisplayMode(.inline)
+        // Editing invalidates any proposal on screen, and cancels one in flight —
+        // otherwise a slow response lands against copy the user has moved on from.
+        .onChange(of: text) { _, _ in
+            rewriteTask?.cancel()
+            isRewriting = false
+            rewrite = nil
+            rewriteError = nil
+        }
+        .onDisappear { rewriteTask?.cancel() }
     }
 
     private var intro: some View {
@@ -45,6 +69,180 @@ struct ReadabilityView: View {
                 .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous).fill(ColorTokens.surfaceElevated))
                 .overlay(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous).stroke(ColorTokens.border, lineWidth: 0.5))
         }
+    }
+
+    // MARK: Rewrite
+
+    @ViewBuilder private var rewriteSection: some View {
+        if aiStatus.isReady {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                if isRewriting {
+                    ThinkingIndicator(label: "Rewriting on your iPhone")
+                        .padding(.vertical, Spacing.sm)
+                } else {
+                    rewriteButton
+                }
+                if let rewrite { proposalCard(rewrite) }
+                if let rewriteError { errorNote(rewriteError) }
+            }
+        } else {
+            IntelligenceStatusCard(
+                status: aiStatus,
+                fallbackNote: "The grade level, the stats and the jargon list below are plain arithmetic — they work on every iPhone."
+            )
+        }
+    }
+
+    private var rewriteButton: some View {
+        Button {
+            startRewrite()
+        } label: {
+            Label("Rewrite in plain language", systemImage: "wand.and.sparkles")
+                .font(Typography.headline)
+                .foregroundStyle(ColorTokens.onBrand)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(Capsule().fill(ColorTokens.brandPrimary))
+        }
+        .buttonStyle(.pressableCard)
+        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .accessibilityHint("Suggests a simpler version. Nothing changes until you accept it.")
+    }
+
+    /// A *proposal*, never an edit. The user reads it, checks the new grade, and
+    /// decides — the whole point of the feature is that judgment stays theirs.
+    private func proposalCard(_ result: PlainLanguageRewriter.Result) -> some View {
+        let delta = stats.gradeLevel - result.gradeLevel
+
+        return VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(spacing: Spacing.sm) {
+                Text("SUGGESTED REWRITE")
+                    .font(Typography.eyebrow)
+                    .foregroundStyle(ColorTokens.cognitiveInk)
+                Spacer()
+                Text(gradeDeltaLabel(delta, newGrade: result.gradeLevel))
+                    .font(Typography.caption.weight(.bold))
+                    .foregroundStyle(delta > 0.05 ? ColorTokens.successInk : ColorTokens.textSecondary)
+            }
+
+            Text(result.rewrite)
+                .font(Typography.body)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !result.changes.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    ForEach(result.changes, id: \.self) { change in
+                        HStack(alignment: .top, spacing: Spacing.sm) {
+                            Text("·").foregroundStyle(ColorTokens.textTertiary)
+                            Text(change)
+                                .font(Typography.footnote)
+                                .foregroundStyle(ColorTokens.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: Spacing.sm) {
+                Button {
+                    applyRewrite(result)
+                } label: {
+                    Text("Use this")
+                        .font(Typography.subheadline.weight(.semibold))
+                        .foregroundStyle(ColorTokens.onBrand)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Capsule().fill(ColorTokens.brandPrimary))
+                }
+                .buttonStyle(.pressableCard)
+                .accessibilityHint("Replaces your copy with the suggestion. You can still edit it.")
+
+                Button {
+                    withAnimation(AnimationTokens.snappy) { rewrite = nil }
+                    Haptics.light()
+                } label: {
+                    Text("Dismiss")
+                        .font(Typography.subheadline.weight(.semibold))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Capsule().fill(ColorTokens.surfaceElevated))
+                        .overlay(Capsule().stroke(ColorTokens.border, lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+            .fill(ColorTokens.surfaceElevated))
+        .overlay(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+            .stroke(ColorTokens.cognitive.opacity(0.4), lineWidth: 1))
+    }
+
+    /// Measured from the rewrite, not asserted by the model — so it can honestly
+    /// report that a suggestion didn't help.
+    private func gradeDeltaLabel(_ delta: Double, newGrade: Double) -> String {
+        let grade = String(format: "%.1f", newGrade)
+        if delta > 0.05 { return "grade \(grade), down \(String(format: "%.1f", delta))" }
+        if delta < -0.05 { return "grade \(grade), no simpler" }
+        return "grade \(grade)"
+    }
+
+    @ViewBuilder private func errorNote(_ failure: PlainLanguageRewriter.Failure) -> some View {
+        Text(message(for: failure))
+            .font(Typography.footnote)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func message(for failure: PlainLanguageRewriter.Failure) -> String {
+        switch failure {
+        case .unavailable: return "On-device rewriting isn't available right now. Everything else on this screen still works."
+        case .refused:     return "The model declined to rewrite this one. Try rephrasing, or use the jargon swaps below."
+        case .failed:      return "That didn't work. Try again, or use the jargon swaps below."
+        }
+    }
+
+    // MARK: Actions
+
+    private func startRewrite() {
+        rewriteTask?.cancel()
+        rewriteError = nil
+        withAnimation(AnimationTokens.snappy) { isRewriting = true }
+        let source = text
+        rewriteTask = Task {
+            do {
+                let result = try await PlainLanguageRewriter.rewrite(source)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation(AnimationTokens.spring) {
+                        rewrite = result
+                        isRewriting = false
+                    }
+                    Haptics.success()
+                    // One announcement when the answer is ready. VoiceOver users
+                    // get told it arrived instead of having to go hunting.
+                    AccessibilityNotification.Announcement(
+                        "Rewrite ready. Reading grade \(String(format: "%.1f", result.gradeLevel))."
+                    ).post()
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation(AnimationTokens.snappy) {
+                        rewriteError = error as? PlainLanguageRewriter.Failure ?? .failed
+                        isRewriting = false
+                    }
+                    Haptics.warning()
+                }
+            }
+        }
+    }
+
+    private func applyRewrite(_ result: PlainLanguageRewriter.Result) {
+        // Assigning `text` trips the onChange above, which clears the proposal.
+        withAnimation(AnimationTokens.spring) { text = result.rewrite }
+        Haptics.success()
+        AccessibilityNotification.Announcement("Rewrite applied. You can still edit it.").post()
     }
 
     private var gradeCard: some View {
@@ -110,7 +308,7 @@ struct ReadabilityView: View {
 }
 
 /// Flesch / Flesch-Kincaid with a heuristic syllable counter.
-struct ReadabilityStats {
+struct ReadabilityStats: Equatable {
     let words: Int
     let sentences: Int
     let syllables: Int
