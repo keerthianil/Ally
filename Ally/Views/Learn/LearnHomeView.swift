@@ -8,6 +8,10 @@ struct LearnHomeView: View {
     @State private var searchText = ""
     @State private var selectedCategory: AccessibilityCategory?
     @State private var appeared = false
+    @State private var showingAssistant = false
+    /// Set when the assistant's citation is tapped, so the sheet can hand off
+    /// into the dictionary. Learn has no navigation path to push onto.
+    @State private var assistantTopic: LearnTopic?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let columns = [GridItem(.adaptive(minimum: 160), spacing: Spacing.md)]
@@ -33,6 +37,7 @@ struct LearnHomeView: View {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     hero
                     searchField
+                    askButton
                     categoryChips
                     if isBrowsing {
                         groupedSections
@@ -49,10 +54,17 @@ struct LearnHomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: AccessibilityCategory.self) { CategoryDetailView(category: $0) }
             .navigationDestination(for: LearnTopic.self) { TopicDetailView(topic: $0) }
+            .sheet(isPresented: $showingAssistant) {
+                AssistantView { assistantTopic = $0 }
+            }
+            .sheet(item: $assistantTopic) { topic in
+                NavigationStack { TopicDetailView(topic: topic) }
+            }
             .onAppear {
                 withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : AnimationTokens.spring) {
                     appeared = true
                 }
+                if CommandLine.arguments.contains("-openAssistant") { showingAssistant = true }
             }
         }
     }
@@ -108,6 +120,38 @@ struct LearnHomeView: View {
         .overlay(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
             .stroke(ColorTokens.border, lineWidth: 0.5))
         .padding(.horizontal, Spacing.xl)
+    }
+
+    // MARK: Ask
+
+    /// Sits under the search field on purpose: search is the primary way in, and
+    /// asking is what you do when you don't know the word to search for.
+    private var askButton: some View {
+        Button {
+            Haptics.selection()
+            showingAssistant = true
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .accessibilityHidden(true)
+                Text("Ask a question instead")
+                    .font(Typography.subheadline.weight(.semibold))
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(ColorTokens.cognitiveInk)
+            .padding(.horizontal, Spacing.md)
+            .frame(minHeight: 44)
+            .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                .fill(ColorTokens.cognitive.opacity(0.12)))
+        }
+        .buttonStyle(.pressableCard)
+        .padding(.horizontal, Spacing.xl)
+        .accessibilityLabel("Ask a question")
+        .accessibilityHint("Answers come from Ally's topics, on your iPhone")
     }
 
     // MARK: Category chips

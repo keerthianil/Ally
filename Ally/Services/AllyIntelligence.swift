@@ -42,18 +42,20 @@ enum AllyIntelligence {
             }
         }
 
+        /// Kept feature-neutral: the same card appears in Readability and in the
+        /// assistant, and each supplies its own `fallbackNote` for what still works.
         var detail: String {
             switch self {
             case .ready:
-                return "Text you write here is processed on your iPhone and never leaves it."
+                return "Text you write is processed on your iPhone and never leaves it."
             case .osTooOld:
-                return "Apple's on-device model arrived in iOS 26. Everything below still works without it."
+                return "Apple's on-device model arrived in iOS 26."
             case .deviceUnsupported:
-                return "Apple Intelligence needs newer hardware. Everything below still works without it."
+                return "Apple Intelligence needs newer hardware than this iPhone has."
             case .notEnabled:
-                return "Turn it on in Settings › Apple Intelligence & Siri to get plain-language rewrites."
+                return "You can turn it on in Settings › Apple Intelligence & Siri."
             case .modelNotReady:
-                return "The model is still downloading. Check back shortly — everything below works meanwhile."
+                return "The model is still downloading. Check back shortly."
             }
         }
 

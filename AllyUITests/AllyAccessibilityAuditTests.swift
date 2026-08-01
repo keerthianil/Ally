@@ -7,8 +7,10 @@ import XCTest
 ///
 /// We audit the meaningful categories and deliberately skip `.contrast`,
 /// `.dynamicType`, and `.textClipped`: those fire on the intentionally
-/// low-contrast decorative background and the oversized display numerals, which
-/// are validated separately (the app's own Contrast Checker covers token pairs).
+/// low-contrast decorative background and the oversized display numerals.
+/// Contrast is not left unchecked, though — `ColorTokenContrastTests` recomputes
+/// every token pair in both appearances and fails the build on a regression,
+/// which is stricter than a rendered-pixel sample and covers dark mode too.
 final class AllyAccessibilityAuditTests: XCTestCase {
 
     private let auditTypes: XCUIAccessibilityAuditType = [
@@ -55,6 +57,25 @@ final class AllyAccessibilityAuditTests: XCTestCase {
             contrast.tap()
             try auditCurrentScreen(app)
         }
+    }
+
+    /// The two on-device-model surfaces, audited in the state most users will
+    /// actually get: no Apple Intelligence. The fallback is a real screen, so it
+    /// has to pass the same bar as everything else.
+    @MainActor
+    func testAssistantAccessibilityWithoutModel() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-openAssistant", "-forceAIStatus", "notEnabled"]
+        app.launch()
+        try auditCurrentScreen(app)
+    }
+
+    @MainActor
+    func testReadabilityAccessibilityWithoutModel() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-openTool", "readability", "-forceAIStatus", "notEnabled"]
+        app.launch()
+        try auditCurrentScreen(app)
     }
 
     // MARK: Helper
