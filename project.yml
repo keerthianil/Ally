@@ -34,6 +34,19 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: "Ally uses the camera to preview how your design looks through different types of color blindness."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Ally reads a screenshot you choose so it can simulate color blindness on it."
 
+  AllyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AllyTests
+    dependencies:
+      - target: Ally
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.keerthia.AllyTests
+        SWIFT_VERSION: "5.9"
+
   AllyUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -53,7 +66,9 @@ schemes:
     build:
       targets:
         Ally: all
+        AllyTests: [test]
         AllyUITests: [test]
     test:
       targets:
+        - AllyTests
         - AllyUITests

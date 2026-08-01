@@ -28,7 +28,7 @@ An accessibility tool that fails its own standards has no credibility, so Ally i
 - **Automated audit** — a UI-test target runs Apple's `performAccessibilityAudit` across all three tabs and the deeper screens on every test pass (element detection, ≥44 pt hit regions, descriptions, traits). It caught a real bug where the custom tab bar's icons reported a ~20 pt hit area.
 - **Dynamic Type** — everything scales to the largest accessibility sizes; no fixed-height text.
 - **Reduce Motion** — springs become crossfades, confetti becomes a static sparkle, the animated illustrations settle to a still frame.
-- **Color** — every token pair passes WCAG AA (each brand fill ships a darkened "ink" variant for text); pass/fail is never color-only.
+- **Color** — `ColorTokenContrastTests` recomputes every token pair from the shipping values, in **both** appearances, and fails the build on a regression. Pass/fail is never color-only.
 
 ## Design — "Grape Fizz"
 
@@ -82,3 +82,5 @@ If you change files or `project.yml`, run `xcodegen generate` to regenerate the 
 **"Not sure" doesn't hurt your score.** In the Check flow, "Not sure" is excluded from the denominator so honesty isn't punished — it's tracked separately as items to revisit.
 
 **Math is automated; judgment stays human.** Contrast and color-distinguishability are math, so the Toolkit computes them exactly. Everything that needs semantic context (labels, focus order) is taught, not faked.
+
+**An ink needs an appearance.** Every saturated fill ships an `…Ink` variant for text — but a fixed ink can only ever be right in one mode. A magenta dark enough to read on `#FDF4FA` drops to 2.95:1 on the dark surface; a cyan bright enough for dark mode reads at 1.97:1 on light. The inks are adaptive, and `onFill(_:)` picks white or aubergine by measuring rather than by assuming. Six pairs were failing before this was measured — including the score-ring arcs, which at 1.75:1 against their own tracks were effectively invisible in light mode.

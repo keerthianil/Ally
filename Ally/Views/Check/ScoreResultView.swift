@@ -73,7 +73,7 @@ struct ScoreResultView: View {
             ForEach(result.byCategory) { cs in
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     HStack {
-                        Circle().fill(cs.category.color).frame(width: 12, height: 12)
+                        Circle().fill(cs.category.inkColor).frame(width: 12, height: 12)
                         Text(cs.category.title).font(Typography.bodyEmph)
                             .foregroundStyle(ColorTokens.textPrimary)
                         Spacer()
@@ -87,7 +87,7 @@ struct ScoreResultView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule().fill(cs.category.color.opacity(0.15))
-                            Capsule().fill(cs.category.color)
+                            Capsule().fill(cs.category.inkColor)
                                 .frame(width: max(6, geo.size.width * CGFloat(cs.score) / 100))
                         }
                     }.frame(height: 8)

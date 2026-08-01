@@ -91,14 +91,14 @@ struct ReadabilityView: View {
     private var jargonCard: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Label("Jargon spotted", systemImage: "exclamationmark.bubble.fill")
-                .font(Typography.headline).foregroundStyle(ColorTokens.warning)
+                .font(Typography.headline).foregroundStyle(ColorTokens.warningInk)
             ForEach(jargon, id: \.word) { entry in
                 HStack {
                     Text(entry.word).font(Typography.subheadline.weight(.semibold))
                         .foregroundStyle(ColorTokens.textPrimary)
                     Image(systemName: "arrow.right").font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
                     Text(entry.suggestion).font(Typography.subheadline)
-                        .foregroundStyle(ColorTokens.success)
+                        .foregroundStyle(ColorTokens.successInk)
                     Spacer()
                 }
             }
@@ -136,9 +136,9 @@ struct ReadabilityStats {
     }
     var easeColor: Color {
         switch readingEase {
-        case 70...:   return ColorTokens.success
-        case 50..<70: return ColorTokens.warning
-        default:      return ColorTokens.error
+        case 70...:   return ColorTokens.successInk
+        case 50..<70: return ColorTokens.warningInk
+        default:      return ColorTokens.errorInk
         }
     }
 

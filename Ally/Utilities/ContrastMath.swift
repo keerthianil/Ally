@@ -8,15 +8,47 @@ enum ContrastMath {
     /// Relative luminance per WCAG 2.x (sRGB → linear, weighted).
     static func luminance(_ color: Color) -> Double {
         let (r, g, b) = components(color)
+        return luminance(r: r, g: g, b: b)
+    }
+
+    /// Contrast ratio between two colors, 1.0…21.0.
+    static func ratio(_ a: Color, _ b: Color) -> Double {
+        contrast(luminance(a), luminance(b))
+    }
+
+    // MARK: UIColor variants
+    //
+    // `Color` flattens to whatever trait collection happens to be current, which
+    // is no good for adaptive tokens or for a test that has to check light *and*
+    // dark. These take an already-resolved `UIColor` so the caller decides the
+    // appearance.
+
+    static func luminance(_ color: UIColor) -> Double {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return luminance(r: Double(r), g: Double(g), b: Double(b))
+    }
+
+    static func ratio(_ a: UIColor, _ b: UIColor) -> Double {
+        contrast(luminance(a), luminance(b))
+    }
+
+    /// Resolves both colors for `style` first, so dynamic tokens are compared in
+    /// the appearance you actually mean.
+    static func ratio(_ a: Color, _ b: Color, in style: UIUserInterfaceStyle) -> Double {
+        let traits = UITraitCollection(userInterfaceStyle: style)
+        return ratio(UIColor(a).resolvedColor(with: traits),
+                     UIColor(b).resolvedColor(with: traits))
+    }
+
+    private static func luminance(r: Double, g: Double, b: Double) -> Double {
         func lin(_ c: Double) -> Double {
             c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
         }
         return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
     }
 
-    /// Contrast ratio between two colors, 1.0…21.0.
-    static func ratio(_ a: Color, _ b: Color) -> Double {
-        let la = luminance(a), lb = luminance(b)
+    private static func contrast(_ la: Double, _ lb: Double) -> Double {
         let hi = max(la, lb), lo = min(la, lb)
         return (hi + 0.05) / (lo + 0.05)
     }

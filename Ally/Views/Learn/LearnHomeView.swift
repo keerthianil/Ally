@@ -115,11 +115,11 @@ struct LearnHomeView: View {
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.sm) {
-                chip(title: "All", color: ColorTokens.brandPrimary, selected: selectedCategory == nil) {
+                chip(title: "All", ink: ColorTokens.brandPrimaryInk, selected: selectedCategory == nil) {
                     selectedCategory = nil
                 }
                 ForEach(AccessibilityCategory.allCases) { cat in
-                    chip(title: cat.title, color: cat.color, selected: selectedCategory == cat) {
+                    chip(title: cat.title, ink: cat.inkColor, selected: selectedCategory == cat) {
                         selectedCategory = cat
                     }
                 }
@@ -129,17 +129,20 @@ struct LearnHomeView: View {
         .horizontalScrollFade()
     }
 
-    private func chip(title: String, color: Color, selected: Bool, action: @escaping () -> Void) -> some View {
+    /// The selected chip fills with the category *ink*, not its fill hue. Cyan and
+    /// emerald can't carry legible text at any weight (2.12:1 and 2.28:1 with
+    /// white); their inks clear AA comfortably and read as the same colour family.
+    private func chip(title: String, ink: Color, selected: Bool, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.selection()
             withAnimation(AnimationTokens.snappy) { action() }
         } label: {
             Text(title)
                 .font(Typography.subheadline.weight(.semibold))
-                .foregroundStyle(selected ? ColorTokens.onBrand : ColorTokens.textSecondary)
+                .foregroundStyle(selected ? ColorTokens.onFill(ink) : ColorTokens.textSecondary)
                 .padding(.horizontal, Spacing.md)
                 .frame(minHeight: 44)
-                .background(Capsule().fill(selected ? color : ColorTokens.surfaceElevated))
+                .background(Capsule().fill(selected ? ink : ColorTokens.surfaceElevated))
                 .overlay(Capsule().stroke(selected ? Color.clear : ColorTokens.border, lineWidth: 0.5))
         }
         .buttonStyle(.plain)

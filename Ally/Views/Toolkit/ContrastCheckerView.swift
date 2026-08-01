@@ -14,10 +14,10 @@ struct ContrastCheckerView: View {
     /// One-line, plain-English reading of the ratio.
     private var plainVerdict: (text: String, color: Color) {
         switch ratio {
-        case 7...:      return ("Excellent — passes even the strictest standard (AAA).", ColorTokens.success)
-        case 4.5..<7:   return ("This passes the most common standard (AA).", ColorTokens.success)
-        case 3..<4.5:   return ("Only large or bold text passes here — too low for body text.", ColorTokens.warning)
-        default:        return ("This contrast is hard to read for many users.", ColorTokens.error)
+        case 7...:      return ("Excellent — passes even the strictest standard (AAA).", ColorTokens.successInk)
+        case 4.5..<7:   return ("This passes the most common standard (AA).", ColorTokens.successInk)
+        case 3..<4.5:   return ("Only large or bold text passes here — too low for body text.", ColorTokens.warningInk)
+        default:        return ("This contrast is hard to read for many users.", ColorTokens.errorInk)
         }
     }
 
@@ -142,7 +142,7 @@ struct ContrastCheckerView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: pass ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.system(size: 20))
-                .foregroundStyle(pass ? ColorTokens.success : ColorTokens.error)
+                .foregroundStyle(pass ? ColorTokens.successInk : ColorTokens.errorInk)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(Typography.subheadline.weight(.semibold)).foregroundStyle(ColorTokens.textPrimary)
                 Text(subtitle).font(Typography.caption2).foregroundStyle(ColorTokens.textTertiary)
@@ -151,7 +151,7 @@ struct ContrastCheckerView: View {
             Spacer(minLength: Spacing.sm)
             VStack(alignment: .trailing, spacing: 1) {
                 Text(pass ? "Pass" : "Fail").font(Typography.footnote.weight(.bold))
-                    .foregroundStyle(pass ? ColorTokens.success : ColorTokens.error)
+                    .foregroundStyle(pass ? ColorTokens.successInk : ColorTokens.errorInk)
                 Text(threshold).font(Typography.caption2).foregroundStyle(ColorTokens.textTertiary)
             }
         }

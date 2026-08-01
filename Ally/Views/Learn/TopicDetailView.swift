@@ -130,7 +130,7 @@ struct TopicDetailView: View {
         HStack(spacing: Spacing.sm) {
             Text(topic.wcagRef)
                 .font(Typography.mono)
-                .foregroundStyle(ColorTokens.onBrand)
+                .foregroundStyle(ColorTokens.onFill(ColorTokens.textSecondary))
                 .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, Spacing.xxs)
                 .background(Capsule().fill(ColorTokens.textSecondary))

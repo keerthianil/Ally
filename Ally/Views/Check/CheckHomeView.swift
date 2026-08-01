@@ -227,7 +227,7 @@ private struct ProjectCard: View {
                     Circle().stroke(ColorTokens.scoreColor(latest).opacity(0.2), lineWidth: 5)
                         .frame(width: 52, height: 52)
                     Circle().trim(from: 0, to: CGFloat(latest) / 100)
-                        .stroke(ColorTokens.scoreColor(latest), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .stroke(ColorTokens.scoreInk(latest), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .frame(width: 52, height: 52)
                     Text("\(latest)").font(Typography.subheadline.weight(.bold))

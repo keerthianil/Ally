@@ -29,6 +29,20 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A2728234E75031B848E44D2E"
+               BuildableName = "AllyTests.xctest"
+               BlueprintName = "AllyTests"
+               ReferencedContainer = "container:Ally.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "BCF847CB44307CA4BC2718EF"
                BuildableName = "AllyUITests.xctest"
                BlueprintName = "AllyUITests"
@@ -53,6 +67,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A2728234E75031B848E44D2E"
+               BuildableName = "AllyTests.xctest"
+               BlueprintName = "AllyTests"
+               ReferencedContainer = "container:Ally.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
          <TestableReference
             skipped = "NO"
             parallelizable = "NO">

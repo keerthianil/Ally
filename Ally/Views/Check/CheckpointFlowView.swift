@@ -100,14 +100,18 @@ struct CheckpointFlowView: View {
 
     private var answerButtons: some View {
         VStack(spacing: Spacing.sm) {
-            answerButton(.yes, ColorTokens.success, "checkmark.circle.fill")
-            answerButton(.partially, ColorTokens.warning, "circle.lefthalf.filled")
-            answerButton(.no, ColorTokens.error, "xmark.circle.fill")
-            answerButton(.notSure, ColorTokens.textSecondary, "questionmark.circle.fill")
+            answerButton(.yes, ColorTokens.success, ColorTokens.successInk, "checkmark.circle.fill")
+            answerButton(.partially, ColorTokens.warning, ColorTokens.warningInk, "circle.lefthalf.filled")
+            answerButton(.no, ColorTokens.error, ColorTokens.errorInk, "xmark.circle.fill")
+            answerButton(.notSure, ColorTokens.textSecondary, ColorTokens.textSecondary, "questionmark.circle.fill")
         }
     }
 
-    private func answerButton(_ answer: Checkpoint.Answer, _ color: Color, _ icon: String) -> some View {
+    /// `fill` paints the selected state; `ink` is the same hue darkened enough to
+    /// be read as text on the tinted background. They can't be the same value —
+    /// emerald reads at 2.12:1 and amber at 1.99:1 against the app surface.
+    private func answerButton(_ answer: Checkpoint.Answer, _ fill: Color,
+                              _ ink: Color, _ icon: String) -> some View {
         let chosen = answers[current.id] == answer
         return Button {
             select(answer)
@@ -118,11 +122,11 @@ struct CheckpointFlowView: View {
                 Spacer()
                 if chosen { Image(systemName: "arrow.right").font(.system(size: 15, weight: .bold)) }
             }
-            .foregroundStyle(chosen ? ColorTokens.onBrand : color)
+            .foregroundStyle(chosen ? ColorTokens.onFill(fill) : ink)
             .padding(Spacing.lg)
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                .fill(chosen ? color : color.opacity(0.12)))
+                .fill(chosen ? fill : fill.opacity(0.12)))
         }
         .buttonStyle(.pressableCard)
         .accessibilityHint("Answer \(answer.rawValue)")

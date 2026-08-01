@@ -30,7 +30,7 @@ struct ScoreRing: View {
                     let cscore = Double(result.score(for: cat)) / 100.0
                     let filledEnd = s + (e - s) * cscore * Double(progress)
 
-                    // Track
+                    // Track — a decorative tint of the category hue.
                     context.stroke(
                         arc(center: center, radius: radius, from: s, to: e),
                         with: .color(cat.color.opacity(0.15)),
@@ -42,12 +42,14 @@ struct ScoreRing: View {
                         glow.addFilter(.blur(radius: 8))
                         glow.stroke(
                             arc(center: center, radius: radius, from: s, to: filledEnd),
-                            with: .color(cat.color.opacity(0.6)),
+                            with: .color(cat.inkColor.opacity(0.6)),
                             style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                        // Fill
+                        // Fill — the ink, not the fill hue. The arc *is* the
+                        // information, so it has to clear 3:1 against its own track
+                        // (WCAG 1.4.11); cyan-on-cyan-tint only manages 1.75:1.
                         context.stroke(
                             arc(center: center, radius: radius, from: s, to: filledEnd),
-                            with: .color(cat.color),
+                            with: .color(cat.inkColor),
                             style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     }
                 }
@@ -73,7 +75,7 @@ struct ScoreRing: View {
                 .foregroundStyle(ColorTokens.textSecondary)
             Text(band.label.uppercased())
                 .font(Typography.eyebrow)
-                .foregroundStyle(ColorTokens.scoreColor(result.overall))
+                .foregroundStyle(ColorTokens.scoreInk(result.overall))
                 .padding(.top, 2)
         }
     }
