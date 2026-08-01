@@ -5,9 +5,9 @@ import SwiftUI
 /// Two different layouts on purpose, because browsing and looking something up
 /// are different jobs:
 ///
-/// - **Browsing** gets horizontal rails, one per lens, led by a tall feature
-///   card. You are wandering, so the shape encourages sideways drift and the
-///   whole set of lenses stays visible above the fold.
+/// - **Browsing** shows the four lenses as four cards, and nothing else. You do
+///   not know what you are looking for yet, so the only decision on screen is
+///   which kind of person you are designing for. Tapping opens that lens.
 /// - **Searching or filtering** switches to a vertical masonry column pair. You
 ///   have a target, so the layout stops being scenic and starts being a list
 ///   you can scan. Varied heights keep it from reading as a spreadsheet.
@@ -45,7 +45,7 @@ struct LearnHomeView: View {
                     searchRow
                     categoryChips
                     if isBrowsing {
-                        rails
+                        lensCards
                     } else {
                         MasonryGrid(topics: filtered, appeared: appeared)
                             .padding(.horizontal, Spacing.xl)
@@ -196,67 +196,39 @@ struct LearnHomeView: View {
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
-    // MARK: Browse — one rail per lens
+    // MARK: Browse — the four lenses
 
-    private var rails: some View {
-        VStack(alignment: .leading, spacing: Spacing.xl) {
-            ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { index, category in
-                let topics = LearnContent.topics(for: category)
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    railHeader(category, count: topics.count)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(alignment: .top, spacing: Spacing.md) {
-                            if let lead = topics.first {
-                                NavigationLink(value: lead) { FeatureCard(topic: lead) }
-                                    .buttonStyle(.pressableCard)
-                            }
-                            ForEach(topics.dropFirst()) { topic in
-                                NavigationLink(value: topic) { TopicCard(topic: topic, height: 188) }
-                                    .buttonStyle(.pressableCard)
-                            }
-                        }
-                        .padding(.horizontal, Spacing.xl)
-                        .padding(.vertical, Spacing.xs)
+    /// Four cards, one per lens, in a two-up bento. Each is a doorway rather
+    /// than a preview: the count and the tagline are enough to choose with, and
+    /// the topic titles live one level down where there is room for them.
+    private var lensCards: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("BROWSE BY WHO IT AFFECTS")
+                .font(Typography.eyebrow)
+                .foregroundStyle(ColorTokens.textTertiary)
+                .padding(.horizontal, Spacing.xl)
+                .accessibilityAddTraits(.isHeader)
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Spacing.md),
+                                GridItem(.flexible(), spacing: Spacing.md)],
+                      spacing: Spacing.md) {
+                ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { index, category in
+                    NavigationLink(value: category) {
+                        LensCard(category: category,
+                                 count: LearnContent.topics(for: category).count,
+                                 tall: index % 3 == 0)
                     }
-                    .horizontalScrollFade()
+                    .buttonStyle(.pressableCard)
+                    .floating(index)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 26)
+                    .animation(reduceMotion ? .easeInOut(duration: 0.2)
+                                            : AnimationTokens.spring.delay(Double(index) * 0.08),
+                               value: appeared)
                 }
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 24)
-                .animation(reduceMotion ? .easeInOut(duration: 0.2)
-                                        : AnimationTokens.spring.delay(Double(index) * 0.07),
-                           value: appeared)
             }
+            .padding(.horizontal, Spacing.xl)
         }
-    }
-
-    private func railHeader(_ category: AccessibilityCategory, count: Int) -> some View {
-        HStack(spacing: Spacing.sm) {
-            HStack(spacing: Spacing.sm) {
-                CategorySticker(category: category, size: 36)
-                Text(category.title)
-                    .font(Typography.title3)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Text("\(count)")
-                    .font(Typography.caption.weight(.bold))
-                    .foregroundStyle(category.inkColor)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(category.title), \(count) topics")
-            .accessibilityAddTraits(.isHeader)
-
-            Spacer(minLength: 0)
-
-            NavigationLink(value: category) {
-                Text("See all")
-                    .font(Typography.footnote.weight(.semibold))
-                    .foregroundStyle(category.inkColor)
-                    .padding(.horizontal, Spacing.sm)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("See all \(category.title) topics")
-        }
-        .padding(.horizontal, Spacing.xl)
     }
 
     private var emptyResults: some View {
@@ -299,7 +271,7 @@ private struct MasonryGrid: View {
     /// Heights vary with blurb length so the interlock is content-driven rather
     /// than a random-looking zigzag.
     private func height(for topic: LearnTopic) -> CGFloat {
-        topic.whatItIs.count > 62 ? 206 : 168
+        topic.whatItIs.count > 62 ? 232 : 198
     }
 
     private var columns: ([LearnTopic], [LearnTopic]) {
@@ -327,6 +299,7 @@ private struct MasonryGrid: View {
                     TopicCard(topic: topic, height: height(for: topic))
                 }
                 .buttonStyle(.pressableCard)
+                .floating(i * 2 + offset, amplitude: 2)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 18)
                 .animation(reduceMotion ? .easeInOut(duration: 0.2)
@@ -340,48 +313,59 @@ private struct MasonryGrid: View {
 
 // MARK: - Cards
 
-/// The lead card on each rail. Bigger, sticker on top, blurb underneath.
-private struct FeatureCard: View {
-    let topic: LearnTopic
+/// A whole lens as one card. Deliberately the biggest thing on the screen,
+/// because choosing a lens is the only decision Learn asks you to make.
+private struct LensCard: View {
+    let category: AccessibilityCategory
+    let count: Int
+    /// Staggered heights so four cards read as a bento rather than a 2x2 table.
+    var tall: Bool = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                CategorySticker(category: topic.category, size: 44, onCategoryFill: true)
-                Text(topic.title)
+                LivingCategoryArt(category: category, size: tall ? 62 : 54, onCategoryFill: true)
+                Spacer(minLength: Spacing.xs)
+                Text(category.title)
                     .font(Typography.title3)
                     .foregroundStyle(ColorTokens.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(topic.whatItIs)
-                    .font(Typography.subheadline)
+                Text(category.tagline)
+                    .font(Typography.footnote)
                     .foregroundStyle(ColorTokens.ink.opacity(0.75))
-                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                WCAGPip(ref: topic.wcagRef, tint: ColorTokens.ink.opacity(0.14), text: ColorTokens.ink)
+                Text("\(count) topics")
+                    .font(Typography.caption2.weight(.bold))
+                    .foregroundStyle(ColorTokens.ink)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(ColorTokens.ink.opacity(0.14)))
+                    .padding(.top, Spacing.xxs)
             }
             .padding(Spacing.lg)
-            .frame(width: 218, height: 214, alignment: .topLeading)
-            .background(NotchedCard(notch: 44).fill(topic.category.color))
+            .frame(maxWidth: .infinity, minHeight: tall ? 232 : 202, alignment: .topLeading)
+            .background(NotchedCard(notch: 42).fill(category.color))
 
-            NotchGlyph(systemName: "arrow.up.right", tint: topic.category.inkColor, size: 34)
+            NotchGlyph(systemName: "arrow.up.right", tint: category.inkColor, size: 32)
                 .offset(x: 5, y: -5)
         }
-        .frame(width: 226, height: 222, alignment: .topLeading)
+        // One element, one sentence. VoiceOver should not have to swipe through
+        // four fragments to learn what this card is.
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(topic.title). \(topic.category.title). \(topic.whatItIs)")
-        .accessibilityHint("Opens the topic")
+        .accessibilityLabel("\(category.title). \(category.tagline). \(count) topics.")
+        .accessibilityHint("Opens the \(category.title) topics")
     }
 }
 
-/// The workhorse card, used on rails and in the masonry grid.
+/// The card used in the search and filter masonry.
 private struct TopicCard: View {
     let topic: LearnTopic
-    var height: CGFloat = 168
+    var height: CGFloat = 198
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
+                LivingCategoryArt(category: topic.category, size: 30, onCategoryFill: true)
+                    .padding(.bottom, 2)
                 Text(topic.category.title.uppercased())
                     .font(Typography.caption2.weight(.bold))
                     .foregroundStyle(ColorTokens.ink.opacity(0.65))

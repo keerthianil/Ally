@@ -24,6 +24,7 @@ final class AllyAccessibilityAuditTests: XCTestCase {
     @MainActor
     func testLearnTabAccessibility() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-skipOnboarding"]
         app.launch()
         try auditCurrentScreen(app) // Learn is the default tab
 
@@ -47,6 +48,7 @@ final class AllyAccessibilityAuditTests: XCTestCase {
     @MainActor
     func testToolkitAccessibility() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-skipOnboarding"]
         app.launch()
         app.buttons["Toolkit"].firstMatch.tap()
         try auditCurrentScreen(app)
@@ -75,6 +77,25 @@ final class AllyAccessibilityAuditTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-openTool", "readability", "-forceAIStatus", "notEnabled"]
         app.launch()
+        try auditCurrentScreen(app)
+    }
+
+    /// Onboarding is the first thing a new install sees, so it is audited too.
+    /// Each page is its own VoiceOver container and the page change is announced.
+    @MainActor
+    func testOnboardingAccessibility() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-showOnboarding"]
+        app.launch()
+        try auditCurrentScreen(app)
+
+        // Walk to the last page so the assistant art and final button are audited too.
+        let next = app.buttons["Next"].firstMatch
+        var guard_ = 0
+        while next.waitForExistence(timeout: 2), guard_ < 5 {
+            next.tap()
+            guard_ += 1
+        }
         try auditCurrentScreen(app)
     }
 

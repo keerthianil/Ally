@@ -22,12 +22,13 @@ struct CheckHomeView: View {
                         EmptyCheckState { showingNew = true }
                     } else {
                         newButton
-                        ForEach(projects) { project in
+                        ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in
                             SwipeableProjectRow(
                                 project: project,
                                 onOpen: { open(project) },
                                 onRequestDelete: { requestDelete(project) }
                             )
+                            .floating(index, amplitude: 2)
                         }
                     }
                 }
@@ -112,7 +113,7 @@ struct CheckHomeView: View {
                 .font(Typography.eyebrow).foregroundStyle(ColorTokens.brandPrimaryInk)
             Text("Check")
                 .font(Typography.display).foregroundStyle(ColorTokens.textPrimary)
-            Text("Score any project across the four lenses, and watch it improve.")
+            Text("A self-assessment, not an audit. Answer twenty questions, get a score you can act on.")
                 .font(Typography.callout).foregroundStyle(ColorTokens.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -123,7 +124,7 @@ struct CheckHomeView: View {
         Button { showingNew = true } label: {
             Label("New check", systemImage: "plus")
                 .font(Typography.headline).foregroundStyle(ColorTokens.onBrand)
-                .frame(maxWidth: .infinity, minHeight: 52)
+                .frame(maxWidth: .infinity, minHeight: 54)
                 .background(Capsule().fill(ColorTokens.brandPrimary))
         }
         .buttonStyle(.pressableCard)
@@ -212,83 +213,99 @@ private struct ProjectCard: View {
     @Bindable var project: Project
 
     private var latest: Int? { project.history.sorted { $0.date < $1.date }.last?.score }
+    private var previous: Int? {
+        let h = project.history.sorted { $0.date < $1.date }
+        return h.count >= 2 ? h[h.count - 2].score : nil
+    }
 
     var body: some View {
-        HStack(spacing: Spacing.lg) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(project.name).font(Typography.headline)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Text("\(project.platform.rawValue) · \(project.updatedAt.formatted(date: .abbreviated, time: .omitted))")
-                    .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
-            }
-            Spacer(minLength: 0)
-            if let latest {
-                ZStack {
-                    Circle().stroke(ColorTokens.scoreColor(latest).opacity(0.2), lineWidth: 5)
-                        .frame(width: 52, height: 52)
-                    Circle().trim(from: 0, to: CGFloat(latest) / 100)
-                        .stroke(ColorTokens.scoreInk(latest), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 52, height: 52)
-                    Text("\(latest)").font(Typography.subheadline.weight(.bold))
+        ZStack(alignment: .topTrailing) {
+            HStack(spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(project.name).font(Typography.headline)
                         .foregroundStyle(ColorTokens.textPrimary)
+                    Text("\(project.platform.rawValue) · \(project.updatedAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
+                    if let latest, let previous, latest != previous {
+                        let up = latest > previous
+                        HStack(spacing: 3) {
+                            Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
+                                .font(.system(size: 10, weight: .black))
+                            Text("\(abs(latest - previous)) since last check")
+                                .font(Typography.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(up ? ColorTokens.successInk : ColorTokens.textSecondary)
+                        .padding(.top, 2)
+                    }
                 }
-            } else {
-                Text("Start").font(Typography.subheadline.weight(.semibold))
-                    .foregroundStyle(ColorTokens.brandPrimaryInk)
+                Spacer(minLength: 0)
+                if let latest {
+                    MiniScoreRing(score: latest)
+                } else {
+                    Text("Start").font(Typography.subheadline.weight(.semibold))
+                        .foregroundStyle(ColorTokens.brandPrimaryInk)
+                        .padding(.trailing, Spacing.lg)
+                }
             }
+            .padding(Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(NotchedCard(notch: 38).fill(ColorTokens.surfaceElevated))
+            .overlay(NotchedCard(notch: 38).stroke(ColorTokens.border, lineWidth: 1))
+
+            NotchGlyph(systemName: "chevron.right", tint: ColorTokens.brandPrimaryInk, size: 30)
+                .offset(x: 2, y: -2)
         }
-        .padding(Spacing.lg)
-        .background(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-            .fill(ColorTokens.surfaceElevated))
-        .overlay(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-            .stroke(ColorTokens.border, lineWidth: 0.5))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(project.name), \(project.platform.rawValue)\(latest != nil ? ", score \(latest!)" : ", not started")")
     }
 }
 
-// MARK: - Empty state
-
-/// The four category dots gently orbit the central seal — a small piece of life
-/// on the empty state. Pauses (and settles into a composed ring) under Reduce
-/// Motion, and is decorative to VoiceOver.
-private struct OrbitingDots: View {
+/// The score, drawn small and filling on appear. A number alone is a fact; a
+/// number that arrives is a result, which is the feeling the Check tab is after.
+private struct MiniScoreRing: View {
+    let score: Int
+    @State private var progress: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
-            let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            ZStack {
-                ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { i, cat in
-                    let angle = t * 0.6 + Double(i) / 4 * 2 * .pi
-                    let radius = 40 + 4 * sin(t * 1.5 + Double(i))
-                    Circle().fill(cat.color.opacity(0.9))
-                        .frame(width: 24, height: 24)
-                        .offset(x: radius * cos(angle), y: radius * sin(angle))
-                }
-                Circle().fill(ColorTokens.surfaceElevated).frame(width: 46, height: 46)
-                    .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(ColorTokens.brandPrimary)
-                    .scaleEffect(reduceMotion ? 1 : 1 + 0.04 * sin(t * 1.5))
-            }
+        ZStack {
+            Circle().stroke(ColorTokens.scoreColor(score).opacity(0.30), lineWidth: 5)
+            Circle().trim(from: 0, to: progress)
+                .stroke(ColorTokens.scoreInk(score), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Text("\(score)").font(Typography.subheadline.weight(.bold))
+                .foregroundStyle(ColorTokens.textPrimary)
+                .monospacedDigit()
         }
-        .accessibilityHidden(true)
+        .frame(width: 54, height: 54)
+        .onAppear {
+            guard !reduceMotion else { progress = CGFloat(score) / 100; return }
+            withAnimation(AnimationTokens.ringFill) { progress = CGFloat(score) / 100 }
+        }
+        .accessibilityHidden(true) // the card's combined label already says the score
     }
 }
+
+// MARK: - Empty state
 
 private struct EmptyCheckState: View {
     var onStart: () -> Void
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            OrbitingDots()
-                .frame(height: 110)
+            HStack(spacing: -Spacing.sm) {
+                ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { i, cat in
+                    LivingCategoryArt(category: cat, size: 46)
+                        .padding(Spacing.sm)
+                        .background(Circle().fill(cat.color.opacity(0.34)))
+                        .floating(i, amplitude: 5)
+                }
+            }
+            .frame(height: 96)
+            .accessibilityHidden(true)
 
             Text("Your first check awaits")
                 .font(Typography.title2).foregroundStyle(ColorTokens.textPrimary)
-            Text("Answer a few plain-English questions and get an accessibility score you can act on.")
+            Text("Twenty plain questions across the four lenses. \"Not sure\" does not count against you.")
                 .font(Typography.callout).foregroundStyle(ColorTokens.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

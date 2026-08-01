@@ -16,6 +16,7 @@ struct ToolkitHomeView: View {
                         ForEach(Array(ToolkitTool.allCases.enumerated()), id: \.element) { index, tool in
                             NavigationLink(value: tool) { ToolCard(tool: tool) }
                                 .buttonStyle(.pressableCard)
+                                .floating(index, amplitude: 2)
                                 .opacity(appeared ? 1 : 0)
                                 .offset(y: appeared ? 0 : 24)
                                 .animation(reduceMotion ? .easeInOut(duration: 0.2)
@@ -60,7 +61,7 @@ struct ToolkitHomeView: View {
                 .font(Typography.eyebrow).foregroundStyle(ColorTokens.brandPrimaryInk)
             Text("Toolkit")
                 .font(Typography.display).foregroundStyle(ColorTokens.textPrimary)
-            Text("Five things you'll reach for while you work.")
+            Text("The maths is exact. The judgement stays yours.")
                 .font(Typography.callout).foregroundStyle(ColorTokens.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,6 +97,26 @@ struct ToolkitHomeView: View {
             case .wcag:        return "list.bullet.rectangle.portrait.fill"
             }
         }
+        /// The idling mark for this tool. Each animation restates what the tool
+        /// does, which is the only reason to animate an icon at all.
+        var art: LivingToolArt.Kind {
+            switch self {
+            case .contrast:    return .contrast
+            case .cvd:         return .cvd
+            case .readability: return .readability
+            case .touchTarget: return .touchTarget
+            case .wcag:        return .wcag
+            }
+        }
+        var ink: Color {
+            switch self {
+            case .contrast:    return ColorTokens.visionInk
+            case .cvd:         return ColorTokens.cognitiveInk
+            case .readability: return ColorTokens.brandPrimaryInk
+            case .touchTarget: return ColorTokens.motorInk
+            case .wcag:        return ColorTokens.navigationInk
+            }
+        }
         var color: Color {
             switch self {
             case .contrast:    return ColorTokens.vision
@@ -108,46 +129,44 @@ struct ToolkitHomeView: View {
     }
 }
 
-/// Matches the Learn tab's magazine cards: a category-colored accent strip on
-/// top, then the icon + title + blurb — same corner radius, shadow, and spacing
-/// tokens so the two tabs read as one system.
+/// Same shape language as Learn's cards: a notch with the glyph living in it,
+/// and art that idles. The difference is the fill, which is the elevated surface
+/// rather than a category hue, so five tools in a column don't read as five
+/// unrelated categories.
 private struct ToolCard: View {
     let tool: ToolkitHomeView.ToolkitTool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Rectangle()
-                .fill(tool.color)
-                .frame(height: 6)
-
+        ZStack(alignment: .topTrailing) {
             HStack(spacing: Spacing.lg) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                        .fill(tool.color.opacity(0.18))
-                    Image(systemName: tool.symbol)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(tool.color)
-                }
-                .frame(width: 60, height: 60)
+                LivingToolArt(kind: tool.art, tint: tool.color, ink: tool.ink, size: 52)
+                    .padding(Spacing.sm)
+                    .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                        .fill(tool.color.opacity(0.34)))
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(tool.title).font(Typography.headline).foregroundStyle(ColorTokens.textPrimary)
-                    Text(tool.blurb).font(Typography.subheadline).foregroundStyle(ColorTokens.textSecondary)
+                    Text(tool.title)
+                        .font(Typography.headline)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(tool.blurb)
+                        .font(Typography.subheadline)
+                        .foregroundStyle(ColorTokens.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                Spacer(minLength: Spacing.xl)
             }
             .padding(Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(NotchedCard(notch: 40).fill(ColorTokens.surfaceElevated))
+            .overlay(NotchedCard(notch: 40).stroke(ColorTokens.border, lineWidth: 1))
+
+            NotchGlyph(systemName: "arrow.up.right", tint: tool.ink, size: 32)
+                .offset(x: 2, y: -2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ColorTokens.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous).stroke(ColorTokens.border, lineWidth: 0.5))
-        .shadow(color: tool.color.opacity(0.12), radius: 10, y: 6)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tool.title). \(tool.blurb)")
+        .accessibilityHint("Opens the tool")
     }
 }
 
