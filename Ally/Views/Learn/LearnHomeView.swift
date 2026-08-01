@@ -1,9 +1,18 @@
 import SwiftUI
 
-/// Hero tab — the accessibility encyclopedia as a *dictionary / cheat sheet*, not
-/// a course. Search-first, with category filter chips over a magazine grid of
-/// topic cards. No progress tracking: you browse and reference, you don't
-/// "complete" it.
+/// Hero tab. The accessibility encyclopedia as a dictionary, not a course.
+///
+/// Two different layouts on purpose, because browsing and looking something up
+/// are different jobs:
+///
+/// - **Browsing** gets horizontal rails, one per lens, led by a tall feature
+///   card. You are wandering, so the shape encourages sideways drift and the
+///   whole set of lenses stays visible above the fold.
+/// - **Searching or filtering** switches to a vertical masonry column pair. You
+///   have a target, so the layout stops being scenic and starts being a list
+///   you can scan. Varied heights keep it from reading as a spreadsheet.
+///
+/// No progress tracking anywhere: you reference this, you don't finish it.
 struct LearnHomeView: View {
     @State private var searchText = ""
     @State private var selectedCategory: AccessibilityCategory?
@@ -13,8 +22,6 @@ struct LearnHomeView: View {
     /// into the dictionary. Learn has no navigation path to push onto.
     @State private var assistantTopic: LearnTopic?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private let columns = [GridItem(.adaptive(minimum: 160), spacing: Spacing.md)]
 
     /// Topics after applying the active category chip and search text.
     private var filtered: [LearnTopic] {
@@ -26,7 +33,6 @@ struct LearnHomeView: View {
         }
     }
 
-    /// Browse mode (grouped by category) only when nothing is being filtered.
     private var isBrowsing: Bool {
         selectedCategory == nil && searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
@@ -34,19 +40,20 @@ struct LearnHomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
                     hero
-                    searchField
-                    askButton
+                    searchRow
                     categoryChips
                     if isBrowsing {
-                        groupedSections
+                        rails
                     } else {
-                        filteredGrid
+                        MasonryGrid(topics: filtered, appeared: appeared)
+                            .padding(.horizontal, Spacing.xl)
                     }
+                    if !isBrowsing && filtered.isEmpty { emptyResults }
                 }
-                .padding(.top, Spacing.xxl)
-                .padding(.bottom, 110) // clear the floating tab bar
+                .padding(.top, Spacing.md)
+                .padding(.bottom, 120)
             }
             .background(AllyBackground())
             .scrollIndicators(.hidden)
@@ -72,89 +79,85 @@ struct LearnHomeView: View {
     // MARK: Hero
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("ACCESSIBILITY, MADE TACTILE")
                 .font(Typography.eyebrow)
                 .foregroundStyle(ColorTokens.brandPrimaryInk)
-            Text("Learn")
-                .font(Typography.display)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Text("Your plain-English cheat sheet for accessibility. Search a term or browse by lens, \(LearnContent.all.count) topics, zero jargon.")
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text("Learn")
+                    .font(Typography.display)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("\(LearnContent.all.count)")
+                    .font(Typography.footnote.weight(.bold))
+                    .foregroundStyle(ColorTokens.onFill(ColorTokens.brandPrimary))
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(ColorTokens.brandPrimary))
+                    .accessibilityHidden(true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Learn, \(LearnContent.all.count) topics")
+            .accessibilityAddTraits(.isHeader)
+
+            Text("Look it up, don't finish it.")
                 .font(Typography.callout)
                 .foregroundStyle(ColorTokens.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xl)
     }
 
-    // MARK: Search
+    // MARK: Search and Ask, side by side
 
-    private var searchField: some View {
+    /// The two ways in, given equal weight. Search assumes you know the word;
+    /// Ask is for when you don't, which is most of the time in this subject.
+    private var searchRow: some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(ColorTokens.textTertiary)
-                .accessibilityHidden(true)
-            TextField("Search topics", text: $searchText)
-                .font(Typography.body)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-            if !searchText.isEmpty {
-                Button {
-                    withAnimation(AnimationTokens.snappy) { searchText = "" }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: 50)
-        .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .fill(ColorTokens.surfaceElevated))
-        .overlay(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .stroke(ColorTokens.border, lineWidth: 0.5))
-        .padding(.horizontal, Spacing.xl)
-    }
-
-    // MARK: Ask
-
-    /// Sits under the search field on purpose: search is the primary way in, and
-    /// asking is what you do when you don't know the word to search for.
-    private var askButton: some View {
-        Button {
-            Haptics.selection()
-            showingAssistant = true
-        } label: {
             HStack(spacing: Spacing.sm) {
-                Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(ColorTokens.textTertiary)
                     .accessibilityHidden(true)
-                Text("Ask a question instead")
-                    .font(Typography.subheadline.weight(.semibold))
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .accessibilityHidden(true)
+                TextField("Search topics", text: $searchText)
+                    .font(Typography.body)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                if !searchText.isEmpty {
+                    Button {
+                        withAnimation(AnimationTokens.snappy) { searchText = "" }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("Clear search")
+                }
             }
-            .foregroundStyle(ColorTokens.cognitiveInk)
             .padding(.horizontal, Spacing.md)
-            .frame(minHeight: 44)
-            .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                .fill(ColorTokens.cognitive.opacity(0.12)))
+            .frame(minHeight: 54)
+            .background(Capsule().fill(ColorTokens.surfaceElevated))
+            .overlay(Capsule().stroke(ColorTokens.border, lineWidth: 1))
+
+            Button {
+                Haptics.selection()
+                showingAssistant = true
+            } label: {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(ColorTokens.onFill(ColorTokens.brandPrimary))
+                    .frame(width: 54, height: 54)
+                    .background(Circle().fill(ColorTokens.brandPrimary))
+            }
+            .buttonStyle(.pressableCard)
+            .accessibilityLabel("Ask a question")
+            .accessibilityHint("Answers come from Ally's topics, on your iPhone")
         }
-        .buttonStyle(.pressableCard)
         .padding(.horizontal, Spacing.xl)
-        .accessibilityLabel("Ask a question")
-        .accessibilityHint("Answers come from Ally's topics, on your iPhone")
     }
 
-    // MARK: Category chips
+    // MARK: Chips
 
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -173,9 +176,8 @@ struct LearnHomeView: View {
         .horizontalScrollFade()
     }
 
-    /// The selected chip fills with the category *ink*, not its fill hue. Cyan and
-    /// emerald can't carry legible text at any weight (2.12:1 and 2.28:1 with
-    /// white); their inks clear AA comfortably and read as the same colour family.
+    /// The selected chip fills with the category *ink*, not its pastel fill,
+    /// which could not carry legible text at any weight.
     private func chip(title: String, ink: Color, selected: Bool, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.selection()
@@ -187,79 +189,56 @@ struct LearnHomeView: View {
                 .padding(.horizontal, Spacing.md)
                 .frame(minHeight: 44)
                 .background(Capsule().fill(selected ? ink : ColorTokens.surfaceElevated))
-                .overlay(Capsule().stroke(selected ? Color.clear : ColorTokens.border, lineWidth: 0.5))
+                .overlay(Capsule().stroke(selected ? Color.clear : ColorTokens.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title) topics")
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
-    // MARK: Content — filtered grid
+    // MARK: Browse — one rail per lens
 
-    @ViewBuilder private var filteredGrid: some View {
-        if filtered.isEmpty {
-            emptyResults
-        } else {
-            LazyVGrid(columns: columns, spacing: Spacing.md) {
-                ForEach(Array(filtered.enumerated()), id: \.element.id) { index, topic in
-                    card(topic, index: index)
-                }
-            }
-            .padding(.horizontal, Spacing.xl)
-        }
-    }
-
-    private var emptyResults: some View {
-        VStack(spacing: Spacing.sm) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundStyle(ColorTokens.textTertiary)
-            Text("No topics match “\(searchText)”")
-                .font(Typography.headline)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .multilineTextAlignment(.center)
-            Text("Try a different word, or clear the search to browse everything.")
-                .font(Typography.subheadline)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.xxl)
-        .padding(.horizontal, Spacing.xl)
-    }
-
-    // MARK: Content — grouped browse
-
-    private var groupedSections: some View {
+    private var rails: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            ForEach(AccessibilityCategory.allCases) { category in
+            ForEach(Array(AccessibilityCategory.allCases.enumerated()), id: \.element) { index, category in
                 let topics = LearnContent.topics(for: category)
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    sectionHeader(category, count: topics.count)
-                    LazyVGrid(columns: columns, spacing: Spacing.md) {
-                        ForEach(Array(topics.enumerated()), id: \.element.id) { index, topic in
-                            card(topic, index: index)
+                    railHeader(category, count: topics.count)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: Spacing.md) {
+                            if let lead = topics.first {
+                                NavigationLink(value: lead) { FeatureCard(topic: lead) }
+                                    .buttonStyle(.pressableCard)
+                            }
+                            ForEach(topics.dropFirst()) { topic in
+                                NavigationLink(value: topic) { TopicCard(topic: topic, height: 188) }
+                                    .buttonStyle(.pressableCard)
+                            }
                         }
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.vertical, Spacing.xs)
                     }
+                    .horizontalScrollFade()
                 }
-                .padding(.horizontal, Spacing.xl)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 24)
+                .animation(reduceMotion ? .easeInOut(duration: 0.2)
+                                        : AnimationTokens.spring.delay(Double(index) * 0.07),
+                           value: appeared)
             }
         }
     }
 
-    private func sectionHeader(_ category: AccessibilityCategory, count: Int) -> some View {
+    private func railHeader(_ category: AccessibilityCategory, count: Int) -> some View {
         HStack(spacing: Spacing.sm) {
             HStack(spacing: Spacing.sm) {
-                CategoryIllustration(category: category, size: 34)
+                CategorySticker(category: category, size: 36)
                 Text(category.title)
                     .font(Typography.title3)
                     .foregroundStyle(ColorTokens.textPrimary)
                 Text("\(count)")
                     .font(Typography.caption.weight(.bold))
                     .foregroundStyle(category.inkColor)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(category.color.opacity(0.16)))
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(category.title), \(count) topics")
@@ -277,70 +256,175 @@ struct LearnHomeView: View {
             }
             .accessibilityLabel("See all \(category.title) topics")
         }
+        .padding(.horizontal, Spacing.xl)
     }
 
-    // MARK: Shared card builder (staggered entrance)
-
-    private func card(_ topic: LearnTopic, index: Int) -> some View {
-        NavigationLink(value: topic) {
-            TopicCard(topic: topic)
+    private var emptyResults: some View {
+        VStack(spacing: Spacing.sm) {
+            Text("No topics match “\(searchText)”")
+                .font(Typography.headline)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("Try a different word, or ask a question instead.")
+                .font(Typography.subheadline)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Ask a question") {
+                Haptics.selection()
+                showingAssistant = true
+            }
+            .font(Typography.subheadline.weight(.semibold))
+            .foregroundStyle(ColorTokens.onFill(ColorTokens.brandPrimary))
+            .padding(.horizontal, Spacing.lg)
+            .frame(minHeight: 44)
+            .background(Capsule().fill(ColorTokens.brandPrimary))
+            .padding(.top, Spacing.xs)
         }
-        .buttonStyle(.pressableCard)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .animation(
-            reduceMotion ? .easeInOut(duration: 0.2)
-                         : AnimationTokens.spring.delay(Double(min(index, 8)) * 0.05),
-            value: appeared
-        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xxl)
+        .padding(.horizontal, Spacing.xl)
     }
 }
 
-// MARK: - Magazine topic card
+// MARK: - Masonry
 
-private struct TopicCard: View {
+/// Two columns filled by running height rather than by index, so cards of
+/// different heights interlock instead of leaving a ragged gap. `LazyVGrid`
+/// can't do this: it aligns rows, which is exactly the grid look being avoided.
+private struct MasonryGrid: View {
+    let topics: [LearnTopic]
+    let appeared: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Heights vary with blurb length so the interlock is content-driven rather
+    /// than a random-looking zigzag.
+    private func height(for topic: LearnTopic) -> CGFloat {
+        topic.whatItIs.count > 62 ? 206 : 168
+    }
+
+    private var columns: ([LearnTopic], [LearnTopic]) {
+        var left: [LearnTopic] = [], right: [LearnTopic] = []
+        var lh: CGFloat = 0, rh: CGFloat = 0
+        for t in topics {
+            if lh <= rh { left.append(t); lh += height(for: t) }
+            else { right.append(t); rh += height(for: t) }
+        }
+        return (left, right)
+    }
+
+    var body: some View {
+        let (left, right) = columns
+        HStack(alignment: .top, spacing: Spacing.md) {
+            column(left, offset: 0)
+            column(right, offset: 1)
+        }
+    }
+
+    private func column(_ items: [LearnTopic], offset: Int) -> some View {
+        VStack(spacing: Spacing.md) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { i, topic in
+                NavigationLink(value: topic) {
+                    TopicCard(topic: topic, height: height(for: topic))
+                }
+                .buttonStyle(.pressableCard)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 18)
+                .animation(reduceMotion ? .easeInOut(duration: 0.2)
+                                        : AnimationTokens.spring.delay(Double(min(i * 2 + offset, 8)) * 0.04),
+                           value: appeared)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Cards
+
+/// The lead card on each rail. Bigger, sticker on top, blurb underneath.
+private struct FeatureCard: View {
     let topic: LearnTopic
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Category color accent strip.
-            Rectangle()
-                .fill(topic.category.color)
-                .frame(height: 6)
-
+        ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(topic.category.title.uppercased())
-                    .font(Typography.caption2.weight(.bold))
-                    .foregroundStyle(topic.category.inkColor)
+                CategorySticker(category: topic.category, size: 44, onCategoryFill: true)
                 Text(topic.title)
-                    .font(Typography.headline)
-                    .foregroundStyle(ColorTokens.textPrimary)
+                    .font(Typography.title3)
+                    .foregroundStyle(ColorTokens.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(topic.whatItIs)
                     .font(Typography.subheadline)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .lineLimit(2)
+                    .foregroundStyle(ColorTokens.ink.opacity(0.75))
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: Spacing.sm)
-                Text("WCAG \(topic.wcagRef)")
-                    .font(Typography.caption2.weight(.semibold))
-                    .foregroundStyle(topic.category.inkColor)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(topic.category.color.opacity(0.14)))
+                Spacer(minLength: 0)
+                WCAGPip(ref: topic.wcagRef, tint: ColorTokens.ink.opacity(0.14), text: ColorTokens.ink)
             }
             .padding(Spacing.lg)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: 218, height: 214, alignment: .topLeading)
+            .background(NotchedCard(notch: 44).fill(topic.category.color))
+
+            NotchGlyph(systemName: "arrow.up.right", tint: topic.category.inkColor, size: 34)
+                .offset(x: 5, y: -5)
         }
-        .frame(maxWidth: .infinity, minHeight: 184, alignment: .topLeading)
-        .background(ColorTokens.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-            .stroke(ColorTokens.border, lineWidth: 0.5))
-        .shadow(color: topic.category.color.opacity(0.12), radius: 10, y: 6)
+        .frame(width: 226, height: 222, alignment: .topLeading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(topic.title). \(topic.category.title). \(topic.whatItIs)")
         .accessibilityHint("Opens the topic")
+    }
+}
+
+/// The workhorse card, used on rails and in the masonry grid.
+private struct TopicCard: View {
+    let topic: LearnTopic
+    var height: CGFloat = 168
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(topic.category.title.uppercased())
+                    .font(Typography.caption2.weight(.bold))
+                    .foregroundStyle(ColorTokens.ink.opacity(0.65))
+                Text(topic.title)
+                    .font(Typography.headline)
+                    .foregroundStyle(ColorTokens.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(topic.whatItIs)
+                    .font(Typography.footnote)
+                    .foregroundStyle(ColorTokens.ink.opacity(0.75))
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: Spacing.xs)
+                WCAGPip(ref: topic.wcagRef, tint: ColorTokens.ink.opacity(0.12), text: ColorTokens.ink)
+            }
+            .padding(Spacing.lg)
+            .frame(width: 172, height: height, alignment: .topLeading)
+            .background(NotchedCard(notch: 36).fill(topic.category.color))
+
+            NotchGlyph(systemName: "arrow.up.right", tint: topic.category.inkColor, size: 28)
+                .offset(x: 4, y: -4)
+        }
+        .frame(width: 178, height: height + 6, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(topic.title). \(topic.category.title). \(topic.whatItIs)")
+        .accessibilityHint("Opens the topic")
+    }
+}
+
+/// The criterion number, kept deliberately small. Present for people who want
+/// the spec, out of the way of people who don't.
+private struct WCAGPip: View {
+    let ref: String
+    let tint: Color
+    let text: Color
+
+    var body: some View {
+        Text(ref)
+            .font(Typography.mono)
+            .foregroundStyle(text)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(tint))
     }
 }
 

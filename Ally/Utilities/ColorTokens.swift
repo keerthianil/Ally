@@ -1,47 +1,55 @@
 import SwiftUI
 import UIKit
 
-/// Ally — "Grape Fizz" color system.
+/// Ally — "Grape Fizz", muted.
 ///
-/// Architecture mirrors the Threadline/ARIA design-system DNA: a caseless `enum`
-/// namespace of `static let` colors. Brand hues that need light/dark appearances
-/// live in the asset catalog (`Color("…")`); fixed hues are declared inline as
-/// `Color(hex:)`.
+/// A caseless `enum` namespace of `static let` colors, same shape as the sibling
+/// apps. Everything is declared inline as an adaptive `Color(light:dark:)` pair
+/// rather than living in the asset catalog, so the whole system is readable in
+/// one file and diffable in review.
 ///
-/// Two rules govern the whole app, and `ColorTokenContrastTests` enforces both:
+/// The palette was desaturated in August 2026. The original was five saturated
+/// hues plus a berry hero, which read as loud rather than confident and forced a
+/// separate darkened ink for every single fill. Pulling saturation down turned
+/// the category colours into pastels, and pastels carry the aubergine `ink` at
+/// 7.4:1 to 8.6:1. The system got quieter and simpler at the same time.
 ///
-/// 1. **Every saturated fill ships an `…Ink` variant for text**, ≥4.5:1 on the app
-///    surface. The ink is *adaptive*: on light it's a darkened version of the fill,
-///    on dark it's usually the fill itself (a hue bright enough to read on `#180F1B`
-///    is far too bright to read on `#FDF4FA`, and vice versa). A fixed ink can only
-///    ever be correct in one appearance.
-/// 2. **Text on a saturated fill goes through `onFill(_:)`**, never a hardcoded
-///    white. White clears AA on berry-magenta and on the dark inks, and fails badly
-///    on cyan (2.12:1), emerald (2.28:1), and tangerine (2.61:1).
+/// Two rules govern it, both enforced by `ColorTokenContrastTests`:
+///
+/// 1. **A fill is not a text colour.** Every fill ships an `…Ink` variant, and
+///    the ink is adaptive because a fixed one can only ever be right in one
+///    appearance. It is also what any *information* graphic uses: a score arc
+///    drawn in the pastel fill sits at 1.9:1 against its own track.
+/// 2. **Text on a fill goes through `onFill(_:)`**, never a hardcoded white.
+///    Post-muting it returns `ink` almost everywhere; berry is the one fill left
+///    that white wins on.
 enum ColorTokens {
 
-    // MARK: - Brand (asset catalog: light + dark appearances)
+    // MARK: - Brand
 
-    /// Berry-magenta hero. Primary fills, tab accent, CTAs (white or ink text on top).
-    static let brandPrimary = Color("BrandPrimary")
-    /// Tangerine support. Secondary CTAs and highlights (dark/ink text on top).
-    static let brandSupport = Color("BrandSupport")
-    /// Golden celebration accent — streaks, sparkles, score-up confetti.
-    static let celebration = Color("Celebration")
+    /// Berry hero. Primary fills, tab accent, CTAs. The one saturated colour left
+    /// in the system, and the only fill that carries white rather than ink.
+    static let brandPrimary = Color(light: 0xB3338B, dark: 0xD478B7)
+    /// Apricot support. Secondary emphasis and tints.
+    static let brandSupport = Color(light: 0xE3AD86, dark: 0xDC7F3B)
+    /// Butter celebration accent for streaks, sparkles, and score-up confetti.
+    static let celebration = Color(light: 0xE4CB8A, dark: 0xE4CB8A)
 
     // MARK: - Brand inks (AA-safe text/links, adaptive)
 
-    /// Berry used as *text/links*: deep berry on light, the bright brand hue on dark.
-    static let brandPrimaryInk = Color(light: 0xB0148A, dark: 0xEC4FB4)
-    /// Tangerine used as *text*: burnt on light, warm on dark.
-    static let brandSupportInk = Color(light: 0xB25511, dark: 0xFF934A)
+    /// Berry as text. The muted hero is already dark enough to be read directly,
+    /// so hero and hero-ink are the same value: one fewer thing to keep in sync.
+    static let brandPrimaryInk = Color(light: 0xB3338B, dark: 0xD478B7)
+    /// Apricot as text: burnt on light, warm on dark.
+    static let brandSupportInk = Color(light: 0xB75005, dark: 0xDC7F3B)
 
-    // MARK: - Surfaces (asset catalog: light + dark appearances)
+    // MARK: - Surfaces
 
-    /// App background. Light: blush white `#FDF4FA`. Dark: `#180F1B`.
-    static let surface = Color("Surface")
-    /// Elevated cards/sheets. Light: `#FFFFFF`. Dark: `#241528`.
-    static let surfaceElevated = Color("SurfaceElevated")
+    /// App background. Warm blush cream, not white, so the pastel fills have
+    /// something to sit against.
+    static let surface = Color(light: 0xFAF4F6, dark: 0x1B1419)
+    /// Elevated cards and sheets.
+    static let surfaceElevated = Color(light: 0xFFFFFF, dark: 0x271C27)
 
     // MARK: - Text (system-adaptive so Dynamic Type + Increase Contrast just work)
 
@@ -49,15 +57,17 @@ enum ColorTokens {
     static let textSecondary = Color(.secondaryLabel)
     static let textTertiary = Color(.tertiaryLabel)
 
-    /// Aubergine — the dark counterpart to white for text sitting on a light fill.
-    static let ink = Color(hex: 0x221426)
+    /// Warm aubergine-black. The counterpart to white for text on a light fill,
+    /// and after the palette was muted it is what `onFill` returns almost
+    /// everywhere: the pastels carry it at 7.4:1 to 8.6:1.
+    static let ink = Color(hex: 0x2A1B2E)
 
     /// Text/icons on top of a saturated fill. Picks white or `ink`, whichever wins
     /// on contrast against that fill *in the current appearance*.
     ///
-    /// Returning a dynamic color rather than a resolved one matters: the same chip
-    /// is berry `#D6249F` in light (white text, 4.55:1) and `#EC4FB4` in dark, where
-    /// white would drop to 3.31:1 and aubergine takes over at 5.30:1.
+    /// Returning a dynamic color rather than a resolved one matters: berry is
+    /// `#B3338B` in light, where white wins at 5.59:1, and `#D478B7` in dark,
+    /// where aubergine takes over.
     static func onFill(_ fill: Color) -> Color {
         Color(UIColor { traits in
             let bg = UIColor(fill).resolvedColor(with: traits)
@@ -70,37 +80,41 @@ enum ColorTokens {
     static var onBrand: Color { onFill(brandPrimary) }
 
     // MARK: - Borders / hairlines
-    static let border = Color(.separator)
+    static let border = Color(light: 0xEADFE4, dark: 0x3A2C3A)
 
     // MARK: - Learn category colors (fill + AA text ink)
 
-    /// Vision — cyan.
-    static let vision = Color(hex: 0x12C2E9)
-    static let visionInk = Color(light: 0x0B7488, dark: 0x12C2E9)
-    /// Motor — tangerine (shares the support hue by design).
-    static let motor = Color(hex: 0xFF7A18)
-    static let motorInk = Color(light: 0xB25511, dark: 0xFF934A)
-    /// Cognitive — violet.
-    static let cognitive = Color(hex: 0x8B5CF6)
-    static let cognitiveInk = Color(light: 0x6D3FE0, dark: 0x9266F7)
-    /// Navigation — emerald.
-    static let navigation = Color(hex: 0x22C55E)
-    static let navigationInk = Color(light: 0x15803D, dark: 0x22C55E)
+    // Fills are pastel and carry `ink` as text. Inks are the deep version of the
+    // same hue, for small text and for any graphic that has to be *seen* rather
+    // than merely felt: score arcs, bars, the category dot.
+
+    /// Vision — dusty teal.
+    static let vision = Color(light: 0x84C4D3, dark: 0x84C4D3)
+    static let visionInk = Color(light: 0x0F7990, dark: 0x32ADC9)
+    /// Motor — warm apricot (shares the support hue by design).
+    static let motor = Color(light: 0xE3AD86, dark: 0xE3AD86)
+    static let motorInk = Color(light: 0xB75005, dark: 0xDC7F3B)
+    /// Cognitive — periwinkle.
+    static let cognitive = Color(light: 0xC4B5E4, dark: 0xC4B5E4)
+    static let cognitiveInk = Color(light: 0x7844F0, dark: 0x9A7BE1)
+    /// Navigation — sage.
+    static let navigation = Color(light: 0x7BBE93, dark: 0x7BBE93)
+    static let navigationInk = Color(light: 0x197D3D, dark: 0x3AAD64)
 
     // MARK: - Semantic
     //
-    // The plain tokens are *fills*. Anything that renders one as text uses the
-    // matching `…Ink`: emerald reads at 2.12:1 on the light surface and amber at
-    // 1.99:1, so neither is usable as small text without a darkened variant.
+    // The plain tokens are *fills*, now pastel. Anything rendering one as text
+    // uses the matching `…Ink`: sage reads at 2.0:1 on the cream surface, so it
+    // is unusable as small text without the darkened variant.
 
-    static let success = Color(hex: 0x22C55E)
-    static let successInk = Color(light: 0x16823E, dark: 0x22C55E)
-    static let error = Color(hex: 0xEF4444)
-    static let errorInk = Color(light: 0xCE3A3A, dark: 0xEF4444)
-    static let warning = Color(hex: 0xF59E0B)
-    static let warningInk = Color(light: 0x9D6507, dark: 0xF59E0B)
-    static let info = Color(hex: 0x12C2E9)
-    static let infoInk = Color(light: 0x0B7488, dark: 0x12C2E9)
+    static let success = Color(light: 0x7BBE93, dark: 0x7BBE93)
+    static let successInk = Color(light: 0x197D3D, dark: 0x3AAD64)
+    static let error = Color(light: 0xDEA6A6, dark: 0xDEA6A6)
+    static let errorInk = Color(light: 0xC02020, dark: 0xE58A8A)
+    static let warning = Color(light: 0xD6AD68, dark: 0xD6AD68)
+    static let warningInk = Color(light: 0x905E0A, dark: 0xD6AD68)
+    static let info = Color(light: 0x84C4D3, dark: 0x84C4D3)
+    static let infoInk = Color(light: 0x0F7990, dark: 0x32ADC9)
 
     // MARK: - Score bands (Check tab ring)
 
