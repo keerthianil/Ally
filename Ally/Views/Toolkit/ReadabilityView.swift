@@ -63,6 +63,11 @@ struct ReadabilityView: View {
             Text("EDIT YOUR COPY HERE").font(Typography.eyebrow).foregroundStyle(ColorTokens.textSecondary)
             TextEditor(text: $text)
                 .font(Typography.body)
+                // A TextEditor has no placeholder to fall back on, so without
+                // this VoiceOver announced the main input of this tool as
+                // nothing but "text view".
+                .accessibilityLabel("Your copy")
+                .accessibilityHint("Paste or type the text you want scored")
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .padding(Spacing.md)

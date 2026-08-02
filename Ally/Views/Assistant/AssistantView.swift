@@ -223,6 +223,8 @@ struct AssistantView: View {
                 .focused($inputFocused)
                 .submitLabel(.send)
                 .onSubmit(submit)
+                .accessibilityLabel("Your question")
+                .accessibilityHint("Answers come only from Ally's own topics")
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm)
                 .frame(minHeight: 44)

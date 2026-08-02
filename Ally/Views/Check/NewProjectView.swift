@@ -29,6 +29,7 @@ struct NewProjectView: View {
                             .font(Typography.body)
                             .focused($nameFocused)
                             .submitLabel(.done)
+                            .accessibilityLabel("Project name")
                             .padding(Spacing.lg)
                             .background(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
                                 .fill(ColorTokens.surfaceElevated))
