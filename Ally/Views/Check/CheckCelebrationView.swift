@@ -59,22 +59,21 @@ struct CheckCelebrationView: View {
             .accessibilityHint("Opens the detailed accessibility report")
         }
         .padding(Spacing.xl)
-        .padding(.bottom, 100) // clear the floating tab bar
+        .padding(.bottom, Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AllyBackground(accent: band.accent))
-        .overlay(CelebrationEffect(band: band, trigger: confettiTrigger))
-        // Confetti is the one effect that renders nothing under Reduce Motion,
-        // so the top band keeps a static sparkle. The other three already
-        // resolve to a composed still of themselves.
-        .overlay(alignment: .top) {
-            if band == .amazing && reduceMotion {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(ColorTokens.celebration)
-                    .padding(.top, Spacing.xxl)
-                    .accessibilityHidden(true)
+        .background {
+            ZStack {
+                AllyBackground(accent: band.accent)
+                // The score's own colour, washing down from the top behind the
+                // ring. Green, orange, or red: the same three the ring, the band
+                // label, and the project card all use, so the verdict is one
+                // consistent thing rather than three coincidences.
+                // Shorter than on the report: the effect owns the lower two
+                // thirds of this screen and a full-height wash flattened it.
+                ScoreWash(score: result.overall, height: 340)
             }
         }
+        .overlay(CelebrationEffect(band: band, trigger: confettiTrigger))
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: run)

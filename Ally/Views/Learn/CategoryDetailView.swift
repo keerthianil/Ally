@@ -31,7 +31,7 @@ struct CategoryDetailView: View {
                 .padding(.horizontal, Spacing.xl)
             }
             .padding(.top, Spacing.lg)
-            .padding(.bottom, 110)
+            .padding(.bottom, Spacing.xxl)
         }
         .background(AllyBackground(accent: category.color))
         .scrollIndicators(.hidden)

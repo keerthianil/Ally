@@ -41,11 +41,20 @@ struct CheckpointFlowView: View {
         .background(AllyBackground(accent: current.category.color))
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(project.name)
+        // Sits on the *trailing* side, and is not a chevron. Next to the system
+        // back button it used to read as two identical back arrows, one of which
+        // silently left the whole flow. Different glyph, different side, and a
+        // visible word, so Voice Control can name it too (WCAG 2.5.3).
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .topBarTrailing) {
                 if index > 0 {
-                    Button { goBack() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Previous question")
+                    Button { goBack() } label: {
+                        Label("Previous", systemImage: "arrow.uturn.backward")
+                            .labelStyle(.titleAndIcon)
+                            .font(Typography.footnote.weight(.semibold))
+                    }
+                    .accessibilityLabel("Previous question")
+                    .accessibilityHint("Goes back one question without leaving the check")
                 }
             }
         }

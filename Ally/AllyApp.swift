@@ -56,7 +56,7 @@ enum OnboardingGate {
         // screen, not a first-run tour.
         let automationFlags = ["-uiTest", "-openResult", "-openCelebration", "-openTool",
                                "-openAssistant", "-tabCheck", "-tabToolkit", "-seedDemo",
-                               "-forceAIStatus"]
+                               "-seedBand", "-resetStore", "-forceAIStatus"]
         if args.contains(where: automationFlags.contains) { return false }
         return !hasSeen
     }

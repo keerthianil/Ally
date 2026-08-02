@@ -34,7 +34,12 @@ final class ColorTokenContrastTests: XCTestCase {
          (ColorTokens.successInk,      "successInk"),
          (ColorTokens.errorInk,        "errorInk"),
          (ColorTokens.warningInk,      "warningInk"),
-         (ColorTokens.infoInk,         "infoInk")]
+         (ColorTokens.infoInk,         "infoInk"),
+         // The score bands broke out of the muted palette in August 2026 so the
+         // three verdicts read as a traffic light. They still have to be legible.
+         (ColorTokens.scoreStrongInk,  "scoreStrongInk"),
+         (ColorTokens.scoreFairInk,    "scoreFairInk"),
+         (ColorTokens.scoreWeakInk,    "scoreWeakInk")]
     }
 
     /// Tokens that actually sit behind text somewhere in the app.
@@ -52,7 +57,14 @@ final class ColorTokenContrastTests: XCTestCase {
          (ColorTokens.navigationInk,   "navigationInk"),
          (ColorTokens.success,         "success"),
          (ColorTokens.error,           "error"),
-         (ColorTokens.warning,         "warning")]
+         (ColorTokens.warning,         "warning"),
+         // The destructive swipe action and the report's No pill are filled with
+         // the ink rather than the pastel, because white on the pastel measured
+         // about 2:1 — the exact failure the report was telling you to go fix.
+         (ColorTokens.scoreWeakInk,    "scoreWeakInk"),
+         (ColorTokens.warningInk,      "warningInk"),
+         (ColorTokens.scoreStrongInk,  "scoreStrongInk"),
+         (ColorTokens.scoreFairInk,    "scoreFairInk")]
     }
 
     // MARK: Rule 1 — every ink clears AA as body text, in both appearances
@@ -137,6 +149,53 @@ final class ColorTokenContrastTests: XCTestCase {
                 }
             }
         }
+    }
+
+    // MARK: Rule 5 — the three score bands have to be told apart
+    //
+    // The muted palette was the right call everywhere except here. Sage, apricot
+    // and dusty rose are three pastels of near-identical lightness, and at a
+    // glance, in sunlight, or in peripheral vision they read as one beige. The
+    // score is the only number the app produces, so its three bands are a real
+    // traffic light now. This test is what stops them drifting back.
+
+    func testScoreBandsAreVisuallyDistinctFromEachOther() {
+        let bands: [(Color, String)] = [(ColorTokens.scoreStrong, "strong"),
+                                        (ColorTokens.scoreFair,   "fair"),
+                                        (ColorTokens.scoreWeak,   "weak")]
+        for (style, styleName) in styles {
+            for i in bands.indices {
+                for j in bands.indices where j > i {
+                    let d = distance(bands[i].0, bands[j].0, in: style)
+                    XCTAssertGreaterThan(
+                        d, 0.30,
+                        "\(bands[i].1) and \(bands[j].1) are only \(fmt(d)) apart in \(styleName). "
+                        + "Two score bands that close cannot be told apart at a glance."
+                    )
+                }
+            }
+        }
+    }
+
+    /// Colour is never allowed to carry the verdict on its own, so the band's
+    /// name ships wherever the band's colour does.
+    func testEveryScoreBandHasAName() {
+        let names = [0, 49, 50, 79, 80, 100].map(ColorTokens.scoreLabel)
+        XCTAssertEqual(Set(names).count, 3, "There should be exactly three named bands.")
+        for n in names { XCTAssertFalse(n.isEmpty) }
+    }
+
+    /// Straight-line distance in sRGB. Crude next to a real perceptual metric,
+    /// and entirely sufficient for "are these three obviously different".
+    private func distance(_ a: Color, _ b: Color, in style: UIUserInterfaceStyle) -> Double {
+        let traits = UITraitCollection(userInterfaceStyle: style)
+        let x = UIColor(a).resolvedColor(with: traits)
+        let y = UIColor(b).resolvedColor(with: traits)
+        var xr: CGFloat = 0, xg: CGFloat = 0, xb: CGFloat = 0, xa: CGFloat = 0
+        var yr: CGFloat = 0, yg: CGFloat = 0, yb: CGFloat = 0, ya: CGFloat = 0
+        x.getRed(&xr, green: &xg, blue: &xb, alpha: &xa)
+        y.getRed(&yr, green: &yg, blue: &yb, alpha: &ya)
+        return sqrt(pow(xr - yr, 2) + pow(xg - yg, 2) + pow(xb - yb, 2))
     }
 
     /// Flattens `color` at `alpha` over `background`, the way the renderer does.

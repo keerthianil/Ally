@@ -19,9 +19,26 @@ import SwiftUI
 ///
 /// So: collapse to a smaller pill, keep it tappable, and stay fully expanded
 /// whenever an assistive technology is on.
+///
+/// **On a pushed screen it goes away entirely, and that is a different rule.**
+/// A tab bar is root-level navigation. Once you push a detail screen, the way
+/// back is the back button, and UIKit has hidden the bar on push since 2008
+/// (`hidesBottomBarWhenPushed`); SwiftUI's own `TabView` does the same thing with
+/// `.toolbar(.hidden, for: .tabBar)`. None of the three failures above apply,
+/// because the screen still has a visible, focusable, nameable way out, and the
+/// bar comes straight back when you pop.
+///
+/// Keeping it floating over pushed screens was the actual bug: it sat on top of
+/// the last answer button in the checkpoint flow and the bottom of the report,
+/// and because scroll tracking is only wired to the tab roots it never collapsed
+/// there either. An overlay that permanently covers a control is WCAG 2.4.11 in
+/// the other direction, which is a rule this app teaches.
 @Observable
 final class TabBarVisibility {
     private(set) var isCollapsed = false
+    /// True while a detail screen is pushed. Distinct from `isCollapsed`: that is
+    /// a reversible response to scrolling, this is "the bar does not belong here".
+    private(set) var isHidden = false
 
     private var lastOffset: CGFloat = 0
     private var accumulated: CGFloat = 0
@@ -64,7 +81,18 @@ final class TabBarVisibility {
     /// requires scrolling back up first.
     func expand() { set(false) }
 
-    func reset() { set(false); lastOffset = 0; accumulated = 0 }
+    func reset() { set(false); setHidden(false); lastOffset = 0; accumulated = 0 }
+
+    /// Called by each tab's root with whether its navigation stack has anything
+    /// pushed onto it.
+    func setHidden(_ value: Bool) {
+        guard value != isHidden else { return }
+        withAnimation(.smooth(duration: 0.24)) { isHidden = value }
+        // A bar that comes back should come back whole. Otherwise popping a
+        // screen can restore it in the collapsed pill state it happened to be in
+        // several screens ago, which reads as a glitch.
+        if !value { set(false); accumulated = 0 }
+    }
 
     private func set(_ value: Bool) {
         // Deduping matters: assigning the same value inside `withAnimation`
@@ -89,6 +117,15 @@ extension EnvironmentValues {
 // MARK: - Scroll tracking
 
 extension View {
+    /// Take the floating tab bar off screen while a detail screen is pushed.
+    ///
+    /// Applied to each tab's `NavigationStack` with `!path.isEmpty`, so it is
+    /// driven by the actual navigation state rather than by a preference that
+    /// has to survive a propagation it might not.
+    func tabBarHidden(_ hidden: Bool) -> some View {
+        modifier(TabBarHiddenModifier(hidden: hidden))
+    }
+
     /// Report this scroll view's geometry to the floating tab bar.
     ///
     /// Applied to each tab's root `ScrollView`. On iOS 17 the required geometry
@@ -96,6 +133,17 @@ extension View {
     /// degradation rather than a broken one.
     func tracksTabBar() -> some View {
         modifier(TabBarScrollTracker())
+    }
+}
+
+private struct TabBarHiddenModifier: ViewModifier {
+    @Environment(\.tabBarVisibility) private var visibility
+    let hidden: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { visibility.setHidden(hidden) }
+            .onChange(of: hidden) { _, new in visibility.setHidden(new) }
     }
 }
 

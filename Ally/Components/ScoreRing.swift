@@ -73,18 +73,13 @@ struct ScoreRing: View {
             Text("out of 100")
                 .font(Typography.caption)
                 .foregroundStyle(ColorTokens.textSecondary)
-            Text(band.label.uppercased())
+            Text(ColorTokens.scoreLabel(result.overall).uppercased())
                 .font(Typography.eyebrow)
                 .foregroundStyle(ColorTokens.scoreInk(result.overall))
-                .padding(.top, 2)
-        }
-    }
-
-    private var band: (label: String, _c: Int) {
-        switch result.overall {
-        case 80...:   return ("Strong", 0)
-        case 60..<80: return ("Getting there", 0)
-        default:      return ("Needs work", 0)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(ColorTokens.scoreColor(result.overall).opacity(0.20)))
+                .padding(.top, 4)
         }
     }
 
@@ -102,5 +97,44 @@ struct ScoreRing: View {
         p.addArc(center: center, radius: radius,
                  startAngle: .degrees(from), endAngle: .degrees(to), clockwise: false)
         return p
+    }
+}
+
+// MARK: - Score wash
+
+/// The band colour, poured down the top of a screen behind the ring.
+///
+/// It exists so the verdict is felt before it is read: you know roughly how it
+/// went from the corner of your eye, before the numeral resolves. Kept under 25%
+/// so it tints rather than paints, and so the text on top keeps the contrast it
+/// was measured at against the plain surface.
+///
+/// It is never the only signal. The numeral, the band label, and the ring all say
+/// the same thing in words and shape, which is the rule Ally teaches (WCAG 1.4.1).
+struct ScoreWash: View {
+    let score: Int
+    var height: CGFloat = 420
+
+    var body: some View {
+        GeometryReader { geo in
+            let tint = ColorTokens.scoreColor(score)
+            ZStack(alignment: .top) {
+                LinearGradient(
+                    colors: [tint.opacity(0.24), tint.opacity(0.09), tint.opacity(0)],
+                    startPoint: .top, endPoint: .bottom)
+                .frame(height: min(height, geo.size.height))
+                // A soft bloom right behind where the ring sits, so the gradient
+                // has a centre of gravity instead of reading as a flat header.
+                Circle()
+                    .fill(RadialGradient(colors: [tint.opacity(0.26), tint.opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: 200))
+                    .frame(width: geo.size.width * 1.2, height: geo.size.width * 1.2)
+                    .offset(y: -geo.size.width * 0.42)
+                    .blur(radius: 24)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }

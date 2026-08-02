@@ -27,7 +27,14 @@ struct RootTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            AllyTabBar(selection: $selection, indicator: indicator, visibility: visibility)
+            // Gone entirely on a pushed screen, the way UIKit has hidden the bar
+            // on push since the beginning. Every detail screen has its own back
+            // button, so nothing becomes unreachable, and the bar stops covering
+            // the bottom of screens whose scroll it was never tracking.
+            if !visibility.isHidden {
+                AllyTabBar(selection: $selection, indicator: indicator, visibility: visibility)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .environment(\.tabBarVisibility, visibility)
         // Each tab tracks its own scroll, so switching tabs has to start clean.

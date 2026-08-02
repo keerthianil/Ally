@@ -116,23 +116,61 @@ enum ColorTokens {
     static let info = Color(light: 0x84C4D3, dark: 0x84C4D3)
     static let infoInk = Color(light: 0x0F7990, dark: 0x32ADC9)
 
-    // MARK: - Score bands (Check tab ring)
+    // MARK: - Score bands (Check tab)
 
-    /// Band *fill* for a 0–100 accessibility score — arcs, bars, dots.
+    // The score is the one place in Ally that breaks the muted palette on purpose.
+    //
+    // Everywhere else, pastel is the point: the category hues are wayfinding, not
+    // judgement, so they should not shout. A score is the opposite. It is the only
+    // number the app produces, people read it at a glance, and three desaturated
+    // neighbours (sage, apricot, dusty rose) all read as "beige" in a hallway or in
+    // sunlight. So the three bands are a real traffic light: green, orange, red,
+    // saturated enough to be told apart at a glance and in peripheral vision.
+    //
+    // Colour is never the only channel. Every place a band colour appears, the
+    // number and the band's name appear with it (WCAG 1.4.1, which Ally teaches).
+
+    // The orange and the red are pushed apart deliberately: orange toward yellow,
+    // red away from it. A "warm orange" and a "warm red" sitting next to each
+    // other is the pair that actually gets confused, and `ColorTokenContrastTests`
+    // measures the gap so a later tweak toward prettiness fails the build.
+
+    /// 80 and up. Green.
+    static let scoreStrong    = Color(light: 0x3DA35D, dark: 0x4FC17A)
+    static let scoreStrongInk = Color(light: 0x14713C, dark: 0x5FD08A)
+    /// 50 to 79. Orange.
+    static let scoreFair      = Color(light: 0xF29A2E, dark: 0xF5A32E)
+    static let scoreFairInk   = Color(light: 0xA54D05, dark: 0xF2A45E)
+    /// Under 50. Red.
+    static let scoreWeak      = Color(light: 0xDA3B3B, dark: 0xE55A5A)
+    static let scoreWeakInk   = Color(light: 0xC22626, dark: 0xF08080)
+
+    /// Band *fill* for a 0–100 score — rails, tints, gradient stops, ring tracks.
     static func scoreColor(_ score: Int) -> Color {
         switch score {
-        case 80...:   return success      // emerald
-        case 60..<80: return brandSupport // tangerine
-        default:      return error        // red
+        case 80...:   return scoreStrong
+        case 50..<80: return scoreFair
+        default:      return scoreWeak
         }
     }
 
-    /// Band color for *text* (the "Strong" / "Getting there" / "Needs work" label).
+    /// Band colour for anything that has to be *read* or *seen*: the band label,
+    /// the ring arc, a rail against the card behind it.
     static func scoreInk(_ score: Int) -> Color {
         switch score {
-        case 80...:   return successInk
-        case 60..<80: return brandSupportInk
-        default:      return errorInk
+        case 80...:   return scoreStrongInk
+        case 50..<80: return scoreFairInk
+        default:      return scoreWeakInk
+        }
+    }
+
+    /// The band's name. Colour is never allowed to carry the verdict alone, so
+    /// this ships next to the swatch everywhere the swatch appears.
+    static func scoreLabel(_ score: Int) -> String {
+        switch score {
+        case 80...:   return "Strong"
+        case 50..<80: return "Getting there"
+        default:      return "Early days"
         }
     }
 }
