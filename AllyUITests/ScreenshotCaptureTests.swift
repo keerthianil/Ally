@@ -106,7 +106,14 @@ final class ScreenshotCaptureTests: XCTestCase {
     func testCaptureCelebrationBands() {
         for band in ["strong", "building", "starting"] {
             let app = XCUIApplication()
-            app.launchArguments = ["-uiTest", "-seedDemo", "-seedBand", band, "-openCelebration"]
+            // `-resetStore` is load-bearing, not hygiene. `-seedDemo` returns
+            // early when the demo project already exists, so without it the
+            // second and third launches reuse the first band's answers and all
+            // three shots come back as the same score. They looked different
+            // because the effect was mid-flight, which is exactly the kind of
+            // wrong screenshot that gets shipped.
+            app.launchArguments = ["-uiTest", "-resetStore", "-seedDemo",
+                                   "-seedBand", band, "-openCelebration"]
             app.launch()
             sleep(2) // mid-burst for strong, settled for the other two
             snap(app, "check-celebration-\(band)")
