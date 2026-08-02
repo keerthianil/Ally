@@ -46,6 +46,7 @@ struct ToolkitHomeView: View {
                 autoOpenIfNeeded()
             }
         }
+        .tabBarHidden(!path.isEmpty)
     }
 
     /// Screenshot helper: `-openTool <rawValue>` jumps straight into a tool.
@@ -86,7 +87,7 @@ struct ToolkitHomeView: View {
             case .cvd:         return "See your UI through 8 CVD types"
             case .readability: return "Grade level + jargon flags"
             case .touchTarget: return "Check 44 / 48 / 24 minimums"
-            case .wcag:        return "Searchable spec, in plain words"
+            case .wcag:        return "Flash cards. Flip for the fix."
             }
         }
         var symbol: String {

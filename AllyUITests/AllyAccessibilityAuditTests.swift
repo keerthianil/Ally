@@ -61,6 +61,35 @@ final class AllyAccessibilityAuditTests: XCTestCase {
         }
     }
 
+    /// The flash-card deck, which is the densest control cluster in the app:
+    /// nine filter chips, three deck controls, and a card that is one element
+    /// carrying four custom actions.
+    @MainActor
+    func testWCAGDeckAccessibility() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-openTool", "wcag"]
+        app.launch()
+        try auditCurrentScreen(app)
+
+        // Flip the card and audit the back, which has its own content and its
+        // own deep link into Learn.
+        let flip = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Show the fix")).firstMatch
+        if flip.waitForExistence(timeout: 5) {
+            flip.tap()
+            try auditCurrentScreen(app)
+        }
+    }
+
+    /// The report. Score wash, living category stickers, and the prioritised
+    /// fix list, none of which existed when this file was written.
+    @MainActor
+    func testScoreResultAccessibility() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-seedDemo", "-openResult"]
+        app.launch()
+        try auditCurrentScreen(app)
+    }
+
     /// The two on-device-model surfaces, audited in the state most users will
     /// actually get: no Apple Intelligence. The fallback is a real screen, so it
     /// has to pass the same bar as everything else.

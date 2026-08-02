@@ -11,12 +11,14 @@ struct TopicDetailView: View {
                 titleBlock
                 whoCard
                 section("Why it matters", topic.whyItMatters)
+                mistakeCard
                 demoSection
+                fixItSection
                 testYourselfCard
                 wcagFooter
             }
             .padding(Spacing.xl)
-            .padding(.bottom, 110)
+            .padding(.bottom, Spacing.xxl)
         }
         .background(AllyBackground(accent: topic.category.color))
         .scrollIndicators(.hidden)
@@ -67,6 +69,80 @@ struct TopicDetailView: View {
                 .fill(topic.category.color.opacity(0.12))
         )
         .accessibilityElement(children: .combine)
+    }
+
+    // MARK: What it looks like when it's wrong
+    //
+    // Recognition before definition. Almost nobody can recite 1.3.3, and almost
+    // everybody can spot "tap the round button on the right" once they have been
+    // shown it once. This card is the whole reason the quick reference could be
+    // cut back to three lines: the depth moved here, next to the people it
+    // affects, instead of living in a spec list nobody reads twice.
+    private var mistakeCard: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(ColorTokens.scoreWeakInk)
+                .frame(width: 32, height: 32)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text("What it looks like when it's wrong")
+                    .font(Typography.footnote.weight(.bold))
+                    .foregroundStyle(ColorTokens.scoreWeakInk)
+                Text(topic.mistake)
+                    .font(Typography.body)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+                .fill(ColorTokens.scoreWeak.opacity(0.12))
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: How to fix it
+
+    /// Numbered rather than bulleted, because these are ordered by what to reach
+    /// for first, and because a number is easier to refer back to.
+    private var fixItSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("How to fix it")
+                .font(Typography.headline)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                ForEach(Array(topic.fixIt.enumerated()), id: \.offset) { i, step in
+                    HStack(alignment: .top, spacing: Spacing.md) {
+                        Text("\(i + 1)")
+                            .font(Typography.caption.weight(.black))
+                            .foregroundStyle(ColorTokens.onFill(topic.category.inkColor))
+                            .frame(width: 24, height: 24)
+                            .background(Circle().fill(topic.category.inkColor))
+                            .accessibilityHidden(true)
+                        Text(step)
+                            .font(Typography.body)
+                            .foregroundStyle(ColorTokens.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Step \(i + 1). \(step)")
+                }
+            }
+            .padding(Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+                    .fill(ColorTokens.surfaceElevated)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+                    .stroke(ColorTokens.border, lineWidth: 1)
+            )
+        }
     }
 
     private func section(_ title: String, _ body: String) -> some View {
@@ -126,21 +202,48 @@ struct TopicDetailView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The spec line. Deliberately the smallest thing on the screen, and honest
+    /// about the topics that map to Apple guidance rather than to a criterion.
     private var wcagFooter: some View {
         HStack(spacing: Spacing.sm) {
-            Text(topic.wcagRef)
-                .font(Typography.mono)
-                .foregroundStyle(ColorTokens.onFill(ColorTokens.textSecondary))
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xxs)
-                .background(Capsule().fill(ColorTokens.textSecondary))
-            Text("WCAG · \(topic.wcagTitle)")
-                .font(Typography.footnote)
-                .foregroundStyle(ColorTokens.textTertiary)
-            Spacer()
+            if topic.isPlatformGuidance {
+                Text("Apple platform")
+                    .font(Typography.caption.weight(.bold))
+                    .foregroundStyle(ColorTokens.onFill(ColorTokens.textSecondary))
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(Capsule().fill(ColorTokens.textSecondary))
+                Text(topic.wcagTitle)
+                    .font(Typography.footnote)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            } else {
+                Text(topic.wcagRef)
+                    .font(Typography.mono)
+                    .foregroundStyle(ColorTokens.onFill(ColorTokens.textSecondary))
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(Capsule().fill(ColorTokens.textSecondary))
+                if let level = topic.level {
+                    Text(level.rawValue)
+                        .font(Typography.caption2.weight(.black))
+                        .foregroundStyle(ColorTokens.onFill(topic.category.inkColor))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(topic.category.inkColor))
+                }
+                Text("WCAG · \(topic.wcagTitle)")
+                    .font(Typography.footnote)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Maps to WCAG criterion \(topic.wcagRef), \(topic.wcagTitle)")
+        .accessibilityLabel(
+            topic.isPlatformGuidance
+            ? "Apple platform guidance: \(topic.wcagTitle). No WCAG criterion covers this."
+            : "Maps to WCAG criterion \(topic.wcagRef), \(topic.wcagTitle), level \(topic.level?.rawValue ?? "")"
+        )
     }
 }
 

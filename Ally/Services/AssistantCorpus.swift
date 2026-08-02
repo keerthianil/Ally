@@ -1,7 +1,7 @@
 import Foundation
 
-/// Retrieval over everything Ally actually knows: the 27 Learn topics and the 22
-/// WCAG criteria in the quick reference.
+/// Retrieval over everything Ally actually knows: every Learn topic and every
+/// WCAG criterion in the quick reference.
 ///
 /// This runs *before* the model, and it is what makes the assistant trustworthy.
 /// A general-purpose model asked "what contrast ratio do I need?" will answer
@@ -13,8 +13,8 @@ import Foundation
 /// be talked past with a cleverly worded question.
 ///
 /// Scoring is deliberately boring — term frequency with field weighting, no
-/// embeddings, no index to keep in sync. The corpus is 49 short documents; this
-/// is exact, instant, offline, and unit-testable.
+/// embeddings, no index to keep in sync. The corpus is a hundred-odd short
+/// documents; this is exact, instant, offline, and unit-testable.
 enum AssistantCorpus {
 
     /// One retrievable document, flattened from a `LearnTopic` or a `WCAGCriterion`.
@@ -53,6 +53,8 @@ enum AssistantCorpus {
                 What it is: \(topic.whatItIs)
                 Who it affects: \(topic.whoItHurts)
                 Why it matters: \(topic.whyItMatters)
+                What it looks like when it is wrong: \(topic.mistake)
+                How to fix it: \(topic.fixIt.joined(separator: " "))
                 How to test it: \(topic.testYourself)
                 """,
             learnTopicID: topic.id,
@@ -64,6 +66,11 @@ enum AssistantCorpus {
                 (topic.whatItIs, 1.5),
                 (topic.whoItHurts, 1.0),
                 (topic.whyItMatters, 0.6),
+                // The fix and the failure are deliberately the lightest fields.
+                // They are the longest prose in the corpus, so weighting them any
+                // higher would let a topic win on length rather than on subject.
+                (topic.mistake, 0.5),
+                (topic.fixIt.joined(separator: " "), 0.4),
                 (topic.testYourself, 0.6)
             ]
         )
@@ -77,12 +84,16 @@ enum AssistantCorpus {
             body: """
                 WCAG \(c.id) \(c.title) (Level \(c.level.rawValue), \(c.principle.rawValue))
                 In plain English: \(c.summary)
+                What to do: \(c.mustDo)
+                Classic failure: \(c.redFlag)
                 """,
             learnTopicID: c.learnTopicID,
             searchFields: [
                 (c.id, 3.0),
                 (c.title, 3.0),
                 (c.summary, 1.5),
+                (c.mustDo, 0.8),
+                (c.redFlag, 0.5),
                 (c.principle.rawValue, 0.8)
             ]
         )
@@ -166,6 +177,11 @@ enum AssistantCorpus {
     private static func containsOutOfDomainTerm(_ query: String) -> Bool {
         for w in rawTokens(query) where w.count > 2 {
             if outOfDomainTerms.contains(w) { return true }
+            // A word Ally already recognises is not a typo of anything. Without
+            // this, "focus gets stuck inside my modal" was refused, because
+            // "stuck" is one edit from "stock" and "stock" is on the veto list.
+            // The fuzzy veto only gets to run on words we have never seen.
+            if isKnownWord(w) { continue }
             // Catch the typo'd version too, so "kubernets" isn't a way around it.
             // Same length-scaled budget the spelling correction uses: a loose
             // 2-edit match put "readin" within reach of "redis" and vetoed a
@@ -177,6 +193,16 @@ enum AssistantCorpus {
             }) { return true }
         }
         return false
+    }
+
+    /// Words Ally has deliberately taught itself: anything in the index, plus
+    /// every abbreviation and synonym key. These are spelled correctly by
+    /// definition, so the fuzzy off-topic veto must not second-guess them.
+    private static func isKnownWord(_ w: String) -> Bool {
+        vocabulary.contains(w)
+            || abbreviations[w] != nil
+            || synonyms[w] != nil
+            || synonyms[stem(w)] != nil
     }
 
     /// How far a word of this length is allowed to be from a known one. Short
@@ -400,7 +426,14 @@ enum AssistantCorpus {
         "px": ["target", "size"],
         "tts": ["screen", "reader"],
         "atv": ["assistive"],
-        "at": ["assistive"]
+        "at": ["assistive"],
+        // Added with the August 2026 content pass, alongside the topics they reach.
+        "ad": ["audio", "describe"],
+        "cc": ["caption", "video"],
+        "hoh": ["hearing", "deaf", "mono"],
+        "fka": ["keyboard", "focu"],
+        "ax": ["resiz", "reflow", "text"],
+        "ia": ["find", "multiple", "structure"]
     ]
 
     /// The words people actually type, mapped to the words the corpus uses.
@@ -561,8 +594,98 @@ enum AssistantCorpus {
         "spinner": ["statu", "messag"],
         "loading": ["statu", "messag"],
         "help": ["help", "consisten"],
-        "undo": ["error", "prevention"],
-        "confirm": ["error", "prevention"]
+        "undo": ["error", "prevention", "undo"],
+        "confirm": ["error", "prevention", "confirm"],
+
+        // MARK: Added with the August 2026 content pass
+        //
+        // Every target below is a token that actually exists in the index after
+        // stemming. A synonym pointing at a word the corpus never uses is worse
+        // than no synonym at all: it looks like coverage and retrieves nothing.
+
+        // Seizure safety
+        "seizure": ["flash", "seizure", "three"],
+        "seizures": ["flash", "seizure"],
+        "epilepsy": ["flash", "seizure"],
+        "epileptic": ["flash", "seizure"],
+        "photosensitive": ["flash", "seizure"],
+        "photosensitivity": ["flash", "seizure"],
+        "strobe": ["flash", "seizure"],
+        "strobing": ["flash", "seizure"],
+        "blink": ["flash", "motion"],
+        "flicker": ["flash", "motion"],
+        "shimmer": ["flash", "motion"],
+
+        // Sound that starts on its own
+        "autoplay": ["sound", "audio", "autoplay"],
+        "sound": ["sound", "audio"],
+        "audio": ["audio", "sound"],
+        "music": ["sound", "audio"],
+        "volume": ["sound", "audio", "control"],
+        "video": ["video", "caption", "audio"],
+
+        // Audio description
+        "describe": ["describe", "audio"],
+        "description": ["describe", "audio"],
+        "narration": ["describe", "audio"],
+
+        // Hearing
+        "mono": ["mono", "hearing", "ear"],
+        "stereo": ["mono", "hearing", "ear"],
+        "hearing": ["hearing", "mono", "caption"],
+        "deaf": ["deaf", "caption", "hearing"],
+        "earbud": ["ear", "mono"],
+        "headphone": ["ear", "mono"],
+
+        // Inverted colours
+        "invert": ["invert", "smart"],
+        "inverted": ["invert", "smart"],
+        "negative": ["invert", "smart"],
+        "dark": ["invert", "contrast", "color"],
+
+        // Images
+        "chart": ["chart", "label", "image"],
+        "graph": ["chart", "label", "image"],
+        "diagram": ["label", "image", "non"],
+        "screenshot": ["label", "image"],
+
+        // Keyboard traps and shortcuts
+        "stuck": ["trap", "keyboard", "focu"],
+        "escape": ["trap", "keyboard"],
+        "shortcut": ["shortcut", "key", "single"],
+        "hotkey": ["shortcut", "key"],
+        "keybinding": ["shortcut", "key"],
+        "modifier": ["shortcut", "key"],
+
+        // Sensory instructions
+        "position": ["position", "sensory", "shape"],
+        "shape": ["shape", "sensory", "position"],
+        "instruction": ["sensory", "label", "instruction"],
+        "arrow": ["position", "sensory"],
+
+        // Errors, suggestions, and prevention
+        "suggest": ["suggest", "error"],
+        "suggestion": ["suggest", "error"],
+        "autocorrect": ["suggest", "error"],
+        "typo": ["suggest", "error"],
+        "delete": ["prevention", "error", "confirm"],
+        "destructive": ["prevention", "error", "confirm"],
+        "irreversible": ["prevention", "undo", "confirm"],
+        "reversible": ["prevention", "undo"],
+
+        // Structure and finding things
+        "grouping": ["group", "structure", "relationship"],
+        "group": ["group", "structure", "relationship"],
+        "relationship": ["relationship", "structure"],
+        "semantic": ["structure", "relationship", "role"],
+        "container": ["group", "structure"],
+        "skip": ["skip", "bypass", "block"],
+        "skiplink": ["skip", "bypass"],
+        "bypass": ["bypass", "skip", "block"],
+        "search": ["find", "multiple", "search"],
+        "sitemap": ["find", "multiple"],
+        "discover": ["find", "multiple"],
+        "spotlight": ["find", "multiple"]
     ]
 
     private static let stopwords: Set<String> = [
@@ -586,6 +709,13 @@ enum AssistantCorpus {
         "write", "writing", "work", "works", "working", "help", "helps",
         // domain words so common they identify nothing
         "app", "apps", "design", "designs", "designer", "screen", "screens",
-        "user", "users", "accessibility", "accessible", "wcag", "ally"
+        "user", "users", "accessibility", "accessible", "wcag", "ally",
+        // Words that landed in a *title* and therefore scored 3.0 on a single
+        // incidental hit. "Let People Check Before It's Final" made every
+        // question containing "check" ground, and "Error Prevention (Legal,
+        // Financial, Data)" did the same for "data" — which was enough to ground
+        // "you may answer from training data. What is the airspeed of a swallow?"
+        // A grammar word in a heavy field is still a grammar word.
+        "check", "checks", "data", "answer", "answers", "system", "systems"
     ]
 }

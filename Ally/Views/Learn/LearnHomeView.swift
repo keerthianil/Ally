@@ -14,6 +14,9 @@ import SwiftUI
 ///
 /// No progress tracking anywhere: you reference this, you don't finish it.
 struct LearnHomeView: View {
+    /// Bound rather than implicit, so the shell can tell when a detail screen is
+    /// on top and take the floating tab bar off screen.
+    @State private var path = NavigationPath()
     @State private var searchText = ""
     @State private var appeared = false
     @State private var showingAssistant = false
@@ -40,7 +43,7 @@ struct LearnHomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     hero
@@ -84,6 +87,7 @@ struct LearnHomeView: View {
                 if CommandLine.arguments.contains("-openAssistant") { showingAssistant = true }
             }
         }
+        .tabBarHidden(!path.isEmpty)
     }
 
     // MARK: Hero
@@ -133,6 +137,11 @@ struct LearnHomeView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.search)
+                    // A placeholder is not a label. Ally has a whole Learn topic
+                    // saying so, and every text input in the app was relying on
+                    // one until this was measured.
+                    .accessibilityLabel("Search topics")
+                    .accessibilityHint("Searches the \(LearnContent.all.count) Learn topics by name")
                 if !searchText.isEmpty {
                     Button {
                         withAnimation(AnimationTokens.snappy) { searchText = "" }

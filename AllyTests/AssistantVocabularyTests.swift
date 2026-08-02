@@ -73,6 +73,43 @@ final class AssistantVocabularyTests: XCTestCase {
         }
     }
 
+    /// The August 2026 content pass added fourteen topics. New content that the
+    /// assistant cannot reach is content that only exists for people who already
+    /// knew to go looking for it.
+    func testTheNewTopicsAreReachableInEverydayWords() {
+        let cases: [(query: String, expected: String)] = [
+            ("could this animation trigger a seizure?",      "topic:seizure-safety"),
+            ("is it ok to autoplay a video with sound?",     "topic:autoplay-audio"),
+            ("do I need an audio description track?",        "topic:audio-description"),
+            ("what if someone is deaf in one ear?",          "topic:mono-audio"),
+            ("my photos look wrong with inverted colours",   "topic:smart-invert"),
+            ("how do I write alt text for a chart?",         "topic:alt-text"),
+            ("focus gets stuck inside my modal",             "topic:keyboard-trap"),
+            ("are single letter keyboard shortcuts ok?",     "topic:character-shortcuts"),
+            ("can I say tap the button on the right?",       "topic:sensory-characteristics"),
+            ("should I suggest a fix in the error?",         "topic:error-suggestion"),
+            ("do I need a confirm step before delete?",      "topic:error-prevention"),
+            ("how do I group related fields for VoiceOver?", "topic:info-relationships"),
+            ("can people skip past my nav bar?",             "topic:bypass-blocks"),
+            ("do I need search as well as browse?",          "topic:multiple-ways")
+        ]
+        for (q, expected) in cases {
+            let ids = AssistantCorpus.search(q, limit: 5).map(\.passage.id)
+            XCTAssertTrue(grounds(q), "'\(q)' should ground. Terms: \(AssistantCorpus.tokenize(q))")
+            XCTAssertTrue(ids.contains(expected),
+                          "'\(q)' should reach \(expected); got \(ids).")
+        }
+    }
+
+    /// The typo path is generated from the index, so new content widens it for
+    /// free. These are the misspellings the new vocabulary invites.
+    func testTyposInTheNewVocabularyStillGround() {
+        for q in ["seizuer risk from flashing", "autoplay audoi", "keybord trap",
+                  "invertted colors", "senosry characteristics"] {
+            XCTAssertTrue(grounds(q), "'\(q)' should survive its typo. Terms: \(AssistantCorpus.tokenize(q))")
+        }
+    }
+
     func testBritishSpellingWorks() {
         XCTAssertTrue(grounds("What colour contrast do I need?"))
         XCTAssertTrue(grounds("Is this readable for colourblind users?"))

@@ -40,29 +40,76 @@ final class ScreenshotCaptureTests: XCTestCase {
     }
 
     // MARK: Learn — deeper screens
+    //
+    // Both selectors here went stale and neither failed, which is the worst way
+    // for a screenshot test to break: it hunted for a "Color Contrast" card that
+    // browse no longer shows and a "Vision topics" filter chip that was deleted,
+    // found neither, and passed. Learn now opens on four lens cards, so the two
+    // routes in are the search field and a lens.
 
     @MainActor
     func testCaptureLearnDeep() {
-        // Topic detail (with the before/after demo).
+        // Search, which is what swaps Learn into the masonry layout.
         var app = XCUIApplication()
         app.launchArguments = ["-uiTest"]
         app.launch()
-        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Color Contrast")).firstMatch
-        if card.waitForExistence(timeout: 5) {
-            card.tap()
+        let search = app.textFields["Search topics"].firstMatch
+        if search.waitForExistence(timeout: 5) {
+            search.tap()
+            search.typeText("contrast")
             sleep(1)
-            snap(app, "learn-topic-detail")
+            snap(app, "learn-search")
+
+            let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Color Contrast")).firstMatch
+            if card.waitForExistence(timeout: 3) {
+                card.tap()
+                sleep(1)
+                snap(app, "learn-topic-detail")
+            }
         }
 
-        // Category-filtered grid.
+        // A whole lens, which is the browse route.
         app = XCUIApplication()
         app.launchArguments = ["-uiTest"]
         app.launch()
-        let chip = app.buttons["Vision topics"].firstMatch
-        if chip.waitForExistence(timeout: 5) {
-            chip.tap()
+        let lens = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Vision.")).firstMatch
+        if lens.waitForExistence(timeout: 5) {
+            lens.tap()
             sleep(1)
-            snap(app, "learn-filtered")
+            snap(app, "learn-category")
+        }
+    }
+
+    // MARK: Check — the three celebration bands
+    //
+    // Kept in its own test rather than folded into the flag list: the effect a
+    // score gets is chosen by the score, so this needs one relaunch per band, and
+    // a single test doing thirteen consecutive launches is what makes the
+    // simulator give up halfway through.
+
+    @MainActor
+    func testCaptureCelebrationBands() {
+        for band in ["strong", "building", "starting"] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-uiTest", "-seedDemo", "-seedBand", band, "-openCelebration"]
+            app.launch()
+            sleep(2) // mid-burst for strong, settled for the other two
+            snap(app, "check-celebration-\(band)")
+        }
+    }
+
+    // MARK: Toolkit — the flash card, both faces
+
+    @MainActor
+    func testCaptureWCAGCardBack() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTest", "-openTool", "wcag"]
+        app.launch()
+        let flip = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Show the fix")).firstMatch
+        if flip.waitForExistence(timeout: 5) {
+            flip.tap()
+            sleep(1)
+            snap(app, "tool-wcag-back")
         }
     }
 
