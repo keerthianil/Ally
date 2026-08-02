@@ -78,6 +78,7 @@ struct CheckHomeView: View {
             .onAppear { autoOpenIfNeeded() }
             .onChange(of: projects) { _, _ in autoOpenIfNeeded() }
         }
+        .tabBarHidden(!path.isEmpty)
     }
 
     private func requestDelete(_ project: Project) {
@@ -185,10 +186,13 @@ private struct SwipeableProjectRow: View {
                 Image(systemName: "trash.fill").font(.system(size: 20, weight: .bold))
                 Text("Delete").font(Typography.caption2.weight(.bold))
             }
-            .foregroundStyle(.white)
+            // The pastel `error` fill carries neither white nor ink at 4.5:1, so
+            // the destructive action uses the ink as its *fill* and lets
+            // `onFill` pick the text colour per appearance.
+            .foregroundStyle(ColorTokens.onFill(ColorTokens.scoreWeakInk))
             .frame(width: revealWidth)
             .frame(maxHeight: .infinity)
-            .background(ColorTokens.error)
+            .background(ColorTokens.scoreWeakInk)
         }
         .buttonStyle(.plain)
         .accessibilityHidden(true) // reached via the row's accessibility action instead
@@ -210,6 +214,17 @@ private struct SwipeableProjectRow: View {
 
 // MARK: - Project card
 
+/// A project row, coloured by how it scored.
+///
+/// The card used to end in a chevron sitting in a notch, which was decoration
+/// pretending to be information: every row was tappable, so a per-row arrow said
+/// nothing the list did not already say. It has been replaced by the thing you
+/// actually want to know from across the room, which is whether this project is
+/// green, orange, or red.
+///
+/// The colour is never doing that job alone. The score, the band's name, and the
+/// ring's fill all say it too, because a card whose only signal is a hue is the
+/// exact failure Ally's own Learn tab spends a topic on (WCAG 1.4.1).
 private struct ProjectCard: View {
     @Bindable var project: Project
 
@@ -219,48 +234,78 @@ private struct ProjectCard: View {
         return h.count >= 2 ? h[h.count - 2].score : nil
     }
 
+    /// Unscored projects get the brand hue rather than a score colour. Red for
+    /// "you have not started" would be a verdict on nothing.
+    private var tint: Color { latest.map(ColorTokens.scoreColor) ?? ColorTokens.brandPrimary }
+    private var tintInk: Color { latest.map(ColorTokens.scoreInk) ?? ColorTokens.brandPrimaryInk }
+
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            HStack(spacing: Spacing.lg) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(project.name).font(Typography.headline)
-                        .foregroundStyle(ColorTokens.textPrimary)
-                    Text("\(project.platform.rawValue) · \(project.updatedAt.formatted(date: .abbreviated, time: .omitted))")
-                        .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
+        HStack(spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(project.name).font(Typography.headline)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("\(project.platform.rawValue) · \(project.updatedAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(Typography.footnote).foregroundStyle(ColorTokens.textSecondary)
+
+                HStack(spacing: Spacing.sm) {
+                    Text(latest.map(ColorTokens.scoreLabel) ?? "Not started yet")
+                        .font(Typography.caption2.weight(.bold))
+                        .foregroundStyle(tintInk)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(tint.opacity(0.18)))
+
                     if let latest, let previous, latest != previous {
                         let up = latest > previous
                         HStack(spacing: 3) {
                             Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
                                 .font(.system(size: 10, weight: .black))
-                            Text("\(abs(latest - previous)) since last check")
-                                .font(Typography.caption2.weight(.semibold))
+                            Text("\(abs(latest - previous))")
+                                .font(Typography.caption2.weight(.bold))
+                                .monospacedDigit()
                         }
-                        .foregroundStyle(up ? ColorTokens.successInk : ColorTokens.textSecondary)
-                        .padding(.top, 2)
+                        .foregroundStyle(up ? ColorTokens.scoreStrongInk : ColorTokens.textSecondary)
                     }
                 }
-                Spacer(minLength: 0)
-                if let latest {
-                    MiniScoreRing(score: latest)
-                } else {
-                    Text("Start").font(Typography.subheadline.weight(.semibold))
-                        .foregroundStyle(ColorTokens.brandPrimaryInk)
-                }
+                .padding(.top, 2)
             }
-            .padding(Spacing.lg)
-            // The notch eats the top-trailing corner, so the row has to end
-            // before it. Without this the score ring and the "Start" label both
-            // slid under the glyph.
-            .padding(.trailing, Spacing.xl)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(NotchedCard(notch: 38).fill(ColorTokens.surfaceElevated))
-            .overlay(NotchedCard(notch: 38).stroke(ColorTokens.border, lineWidth: 1))
+            Spacer(minLength: 0)
 
-            NotchGlyph(systemName: "chevron.right", tint: ColorTokens.brandPrimaryInk, size: 30)
-                .offset(x: 2, y: -2)
+            if let latest {
+                MiniScoreRing(score: latest)
+            } else {
+                Text("Start").font(Typography.subheadline.weight(.bold))
+                    .foregroundStyle(ColorTokens.onFill(ColorTokens.brandPrimary))
+                    .padding(.horizontal, Spacing.lg)
+                    .frame(minHeight: 40)
+                    .background(Capsule().fill(ColorTokens.brandPrimary))
+            }
         }
+        .padding(Spacing.lg)
+        .padding(.leading, Spacing.sm) // clear the rail
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                ColorTokens.surfaceElevated
+                // A wash leaving the rail, so the colour belongs to the card
+                // rather than sitting on top of it.
+                LinearGradient(colors: [tint.opacity(0.16), tint.opacity(0.02)],
+                               startPoint: .leading, endPoint: .trailing)
+            }
+        }
+        .overlay(alignment: .leading) {
+            // The rail carries the band at a glance. Drawn in the ink, so it
+            // clears 3:1 against the card behind it (WCAG 1.4.11).
+            Rectangle().fill(tintInk).frame(width: 6)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+            .stroke(tintInk.opacity(0.35), lineWidth: 1))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(project.name), \(project.platform.rawValue)\(latest != nil ? ", score \(latest!)" : ", not started")")
+        .accessibilityLabel(
+            latest.map { "\(project.name), \(project.platform.rawValue), score \($0) out of 100, \(ColorTokens.scoreLabel($0))" }
+            ?? "\(project.name), \(project.platform.rawValue), not started yet"
+        )
     }
 }
 
@@ -273,15 +318,16 @@ private struct MiniScoreRing: View {
 
     var body: some View {
         ZStack {
-            Circle().stroke(ColorTokens.scoreColor(score).opacity(0.30), lineWidth: 5)
+            Circle().fill(ColorTokens.surfaceElevated)
+            Circle().stroke(ColorTokens.scoreColor(score).opacity(0.28), lineWidth: 5)
             Circle().trim(from: 0, to: progress)
                 .stroke(ColorTokens.scoreInk(score), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-            Text("\(score)").font(Typography.subheadline.weight(.bold))
+            Text("\(score)").font(Typography.headline.weight(.bold))
                 .foregroundStyle(ColorTokens.textPrimary)
                 .monospacedDigit()
         }
-        .frame(width: 54, height: 54)
+        .frame(width: 56, height: 56)
         .onAppear {
             guard !reduceMotion else { progress = CGFloat(score) / 100; return }
             withAnimation(AnimationTokens.ringFill) { progress = CGFloat(score) / 100 }

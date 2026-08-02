@@ -32,9 +32,16 @@ struct ScoreResultView: View {
                 actions
             }
             .padding(Spacing.xl)
-            .padding(.bottom, 110)
+            .padding(.bottom, Spacing.xxl)
         }
-        .background(AllyBackground(accent: ColorTokens.brandPrimary))
+        .background {
+            ZStack {
+                AllyBackground(accent: ColorTokens.scoreColor(result.overall))
+                // Same wash as the celebration screen, so arriving here feels
+                // like the same result rather than a different document.
+                ScoreWash(score: result.overall)
+            }
+        }
         .scrollIndicators(.hidden)
         .navigationTitle(project.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -52,15 +59,19 @@ struct ScoreResultView: View {
 
     private func changePill(_ delta: Int) -> some View {
         let up = delta > 0
+        // The plain tokens are pastel *fills*; as small text they sit near 2:1.
+        // The delta is text, so it uses the inks.
+        let tint = up ? ColorTokens.scoreStrongInk
+                      : (delta < 0 ? ColorTokens.scoreWeakInk : ColorTokens.textSecondary)
         return HStack(spacing: Spacing.sm) {
             Image(systemName: up ? "arrow.up.right" : (delta < 0 ? "arrow.down.right" : "equal"))
             Text(delta == 0 ? "No change since last check" :
                     "\(up ? "+" : "")\(delta) since last check")
                 .font(Typography.footnote.weight(.bold))
         }
-        .foregroundStyle(up ? ColorTokens.success : (delta < 0 ? ColorTokens.error : ColorTokens.textSecondary))
+        .foregroundStyle(tint)
         .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm)
-        .background(Capsule().fill((up ? ColorTokens.success : ColorTokens.textSecondary).opacity(0.12)))
+        .background(Capsule().fill(tint.opacity(0.12)))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(delta == 0 ? "No change since last check"
             : "\(up ? "Up" : "Down") \(abs(delta)) points since last check")
@@ -70,15 +81,23 @@ struct ScoreResultView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text("By category").font(Typography.headline)
                 .foregroundStyle(ColorTokens.textPrimary).accessibilityAddTraits(.isHeader)
-            ForEach(result.byCategory) { cs in
+            ForEach(Array(result.byCategory.enumerated()), id: \.element.id) { i, cs in
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    HStack {
-                        Circle().fill(cs.category.inkColor).frame(width: 12, height: 12)
+                    HStack(spacing: Spacing.sm) {
+                        // The lens's own sticker rather than a plain dot. It is
+                        // the same mark that fronts the lens in Learn, drawn
+                        // small, so the report and the dictionary agree about
+                        // what Vision looks like.
+                        LivingCategoryArt(category: cs.category, size: 24)
+                            .padding(4)
+                            .background(Circle().fill(cs.category.color.opacity(0.30)))
+                            .floating(i, amplitude: 1.5)
                         Text(cs.category.title).font(Typography.bodyEmph)
                             .foregroundStyle(ColorTokens.textPrimary)
                         Spacer()
                         Text("\(cs.score)").font(Typography.bodyEmph)
                             .foregroundStyle(cs.category.inkColor)
+                            .monospacedDigit()
                         if cs.notSure > 0 {
                             Text("· \(cs.notSure) unsure").font(Typography.caption)
                                 .foregroundStyle(ColorTokens.textTertiary)
@@ -130,11 +149,15 @@ struct ScoreResultView: View {
                     if let id = entry.item.learnTopicID { learnTopic = LearnContent.topic(id: id) }
                 } label: {
                     HStack(spacing: Spacing.md) {
+                        // White on the pastel error fill measured about 2:1 —
+                        // the exact failure this list is telling you to fix. The
+                        // pill is filled with the ink and `onFill` picks the text.
+                        let pill = entry.answer == .no ? ColorTokens.scoreWeakInk : ColorTokens.warningInk
                         Text(entry.answer.rawValue)
                             .font(Typography.caption2.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(ColorTokens.onFill(pill))
                             .padding(.horizontal, Spacing.sm).padding(.vertical, 3)
-                            .background(Capsule().fill(entry.answer == .no ? ColorTokens.error : ColorTokens.warning))
+                            .background(Capsule().fill(pill))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.item.question).font(Typography.subheadline)
                                 .foregroundStyle(ColorTokens.textPrimary)
