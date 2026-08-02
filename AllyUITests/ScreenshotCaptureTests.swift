@@ -16,20 +16,35 @@ final class ScreenshotCaptureTests: XCTestCase {
 
     // MARK: Flag-reachable screens (one relaunch each)
 
+    /// Split in two on purpose. The simulator gives up after roughly fifteen
+    /// consecutive `app.launch()` calls in one session (`Mach error -308`), which
+    /// fails the whole class partway through even when every test passes on its
+    /// own. Two shorter tests stay under it.
     @MainActor
-    func testCaptureFlagScreens() {
-        let shots: [(args: [String], name: String, settle: UInt32)] = [
-            (["-uiTest"],                              "learn-home",        1),
-            (["-uiTest", "-seedDemo", "-tabCheck"],    "check-home",        1),
-            (["-uiTest", "-seedDemo", "-openCelebration"], "check-celebration", 3),
-            (["-uiTest", "-seedDemo", "-openResult"],  "check-result",      3),
-            (["-uiTest", "-tabToolkit"],               "toolkit-home",      1),
-            (["-uiTest", "-openTool", "contrast"],     "tool-contrast",     1),
-            (["-uiTest", "-openTool", "cvd"],          "tool-cvd",          1),
-            (["-uiTest", "-openTool", "readability"],  "tool-readability",  1),
-            (["-uiTest", "-openTool", "touchTarget"],  "tool-touchtarget",  1),
-            (["-uiTest", "-openTool", "wcag"],         "tool-wcag",         1)
-        ]
+    func testCaptureFlagScreensA() {
+        capture([
+            (["-uiTest"],                                "learn-home",       1),
+            (["-uiTest", "-showOnboarding"],             "onboarding",       2),
+            (["-uiTest", "-openAssistant"],              "assistant",        2),
+            (["-uiTest", "-resetStore", "-seedDemo", "-tabCheck"], "check-home", 2),
+            (["-uiTest", "-seedDemo", "-openResult"],    "check-result",     3),
+            (["-uiTest", "-tabToolkit"],                 "toolkit-home",     1),
+            (["-uiTest", "-openTool", "wcag"],           "tool-wcag",        1)
+        ])
+    }
+
+    @MainActor
+    func testCaptureFlagScreensB() {
+        capture([
+            (["-uiTest", "-openTool", "contrast"],       "tool-contrast",    1),
+            (["-uiTest", "-openTool", "cvd"],            "tool-cvd",         1),
+            (["-uiTest", "-openTool", "readability"],    "tool-readability", 1),
+            (["-uiTest", "-openTool", "touchTarget"],    "tool-touchtarget", 1)
+        ])
+    }
+
+    @MainActor
+    private func capture(_ shots: [(args: [String], name: String, settle: UInt32)]) {
         for shot in shots {
             let app = XCUIApplication()
             app.launchArguments = shot.args
